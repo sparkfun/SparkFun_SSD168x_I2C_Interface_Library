@@ -38,8 +38,8 @@
 //      - Not Copy  - copy the not of the pixel value to buffer
 //      - Not       - Set the buffer value to not it's current value
 //      - XOR       - XOR of color and current pixel value
-//      - Black     - Set value to always be black
-//      - White     - set value to always be white
+//      - Off       - Set value to always be Off
+//      - On        - set value to always be On
 
 #pragma once
 
@@ -51,12 +51,12 @@ typedef enum gr_op_funcs_
     grROPNotCopy = 1,
     grROPNot = 2,
     grROPXOR = 3,
-    grROPBlack = 4,
-    grROPWhite = 5
+    grROPOff = 4,
+    grROPOn = 5
 } grRasterOp_t;
 
 typedef struct
 {
-    int16_t xmin;
-    int16_t xmax;
+    int16_t ymin;
+    int16_t ymax;
 } pageState_t;

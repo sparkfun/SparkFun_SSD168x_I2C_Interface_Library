@@ -2,6 +2,12 @@
 
 SSD168xI2CCustom myDevice;
 
+// Fonts
+#include <res/qw_fnt_largenum.h>
+
+// Bitmap
+#include "res/qw_bmp_sparkfun.h"
+
 void setup()
 {
     delay(1000);
@@ -21,27 +27,20 @@ void setup()
     }
     Serial.println("Begin success");
 
-    // Do a simple test - fill a rectangle on the screen and then print hello!
+    // Do a simple test - fill a rectangle on the screen and then print text and graphic
 
-    // Fill a rectangle on the screen that has a 4 pixel board
-    myDevice.rectangleFill(4, 4, myDevice.getWidth() - 8, myDevice.getHeight() - 8);
+    // Fill a rectangle on the screen that has a 8 pixel border
+    myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16);
 
-    String hello = "hello"; // our message
+    // Fill a rectangle within that, to leave an 8 pixel frame
+    myDevice.rectangleFill(16, 16, myDevice.getWidth() - 32, myDevice.getHeight() - 32, COLOR_OFF);
 
-    // Center our message on the screen. Get the screen size of the "hello" string,
-    // calling the getStringWidth() and getStringHeight() methods on the oled
+    // Add a logo
+    myDevice.bitmap(16, 75, QW_BMP_SPARKFUN);
 
-    // starting x position - screen width minus string width  / 2
-    int x0 = (myDevice.getWidth() - myDevice.getStringWidth(hello)) / 2;
-
-    // starting y position - screen height minus string height / 2 
-    int y0 = (myDevice.getHeight() - myDevice.getStringHeight(hello)) / 2;
-
-    // Draw the text - color of black (0)
-    myDevice.text(x0, y0, hello, COLOR_WHITE);
-
-
-    myDevice.rectangleFill(10,20,30,40,COLOR_WHITE);
+    // Display our text
+    myDevice.setFont(QW_FONT_LARGENUM);
+    myDevice.text(80, 75, "01234567");
 
     // There's nothing on the screen yet - Now send the graphics to the device
     myDevice.display();

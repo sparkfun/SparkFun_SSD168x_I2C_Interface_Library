@@ -51,55 +51,55 @@
 // These macros work with the pageState_t struct type.
 //
 // Define unique values just outside of the screen buffer (SSD1681) page range
-// (0 base) Note: A page  is 200 bits in length
+// (0 base) Note: A page is 200 bytes in length
 
 #define kPageMin -1  // outside bounds - low value
 #define kPageMax 200 // outside bounds - high value
 
 // clean/ no settings in the page
-#define pageIsClean(_page_) (_page_.xmin == kPageMax)
+#define pageIsClean(_page_) (_page_.ymin == kPageMax)
 
 // Macro to reset page descriptor
 #define pageSetClean(_page_)                                                                                           \
     do                                                                                                                 \
     {                                                                                                                  \
-        _page_.xmin = kPageMax;                                                                                        \
-        _page_.xmax = kPageMin;                                                                                        \
+        _page_.ymin = kPageMax;                                                                                        \
+        _page_.ymax = kPageMin;                                                                                        \
     } while (false)
 
 // Macro to check and adjust record bounds based on a single location
-// The _x_ value must be within the screen (0 <= x < width), limit
+// The _y_ value must be within the screen (0 <= y < width), limit
 // values are ignored
-#define pageCheckBounds(_page_, _x_)                                                                                   \
+#define pageCheckBounds(_page_, _y_)                                                                                   \
     do                                                                                                                 \
     {                                                                                                                  \
-        if (_x_ < _page_.xmin)                                                                                         \
-            _page_.xmin = _x_;                                                                                         \
-        if (_x_ > _page_.xmax)                                                                                         \
-            _page_.xmax = _x_;                                                                                         \
+        if (_y_ < _page_.ymin)                                                                                         \
+            _page_.ymin = _y_;                                                                                         \
+        if (_y_ > _page_.ymax)                                                                                         \
+            _page_.ymax = _y_;                                                                                         \
     } while (false)
 
 // Macro to check and adjust record bounds using another page descriptor
-// The _page2_ x values must be within the screen (0 <= x < width), limit
+// The _page2_ y values must be within the screen (0 <= y < width), limit
 // values are ignored
 #define pageCheckBoundsDesc(_page_, _page2_)                                                                           \
     do                                                                                                                 \
     {                                                                                                                  \
-        if (_page2_.xmin < _page_.xmin)                                                                                \
-            _page_.xmin = _page2_.xmin;                                                                                \
-        if (_page2_.xmax > _page_.xmax)                                                                                \
-            _page_.xmax = _page2_.xmax;                                                                                \
+        if (_page2_.ymin < _page_.ymin)                                                                                \
+            _page_.ymin = _page2_.ymin;                                                                                \
+        if (_page2_.ymax > _page_.ymax)                                                                                \
+            _page_.ymax = _page2_.ymax;                                                                                \
     } while (false)
 
 // Macro to check and adjust record bounds using bounds values
-// Values _x0_ and _x1_ must be within the screen (0 <= x < width)
-#define pageCheckBoundsRange(_page_, _x0_, _x1_)                                                                       \
+// Values _y0_ and _y1_ must be within the screen (0 <= y < width)
+#define pageCheckBoundsRange(_page_, _y0_, _y1_)                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
-        if (_x0_ < _page_.xmin)                                                                                        \
-            _page_.xmin = _x0_;                                                                                        \
-        if (_x1_ > _page_.xmax)                                                                                        \
-            _page_.xmax = _x1_;                                                                                        \
+        if (_y0_ < _page_.ymin)                                                                                        \
+            _page_.ymin = _y0_;                                                                                        \
+        if (_y1_ > _page_.ymax)                                                                                        \
+            _page_.ymax = _y1_;                                                                                        \
     } while (false)
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -107,6 +107,7 @@
 //
 // When communicating with the device, you either send commands or data. Define
 // our codes for these two options - these are basically i2c registers/offsets.
+// Note: these are specific to our MSP430FR2433 I2C-SPI Bridge
 //
 #define kDeviceSendCommand 0x00
 #define kDeviceSendData 0x01
@@ -125,8 +126,8 @@
 //      - Not Copy  - copy the not of the pixel value to buffer
 //      - Not       - Set the buffer value to not it's current value
 //      - XOR       - XOR of color and current pixel value
-//      - Black     - Set value to always be black
-//      - White     - set value to always be white
+//      - Off       - Set value to always be Off (White on e-paper due to inversion)
+//      - On        - set value to always be On (Black on e-paper due to inversion)
 
 typedef void (*rasterOPsFn)(uint8_t *dest, uint8_t src, uint8_t mask);
 
@@ -139,10 +140,10 @@ static const rasterOPsFn m_rasterOps[] = {
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((!(*dst)) & mask); },
     // XOR
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((*dst ^ src) & mask); },
-    // Always Black
-    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = mask | *dst; },
-    // Always White
+    // Always Off
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = ~mask & *dst; },
+    // Always On
+    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = mask | *dst; },
 };
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -201,8 +202,7 @@ bool I2cSsd1681::init(void)
     // Finish up setting up this object
 
     // Number of pages used for this device?
-    m_nPages = m_viewport.height / kByteNBits; // height / number of pixels per byte.
-                                               // TODO - support multiples != 8
+    m_nPages = m_viewport.width / kByteNBits; // width / number of pixels per byte.
 
     // init the graphics buffers
     initBuffers();
@@ -278,17 +278,17 @@ void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
 
     uint8_t buffer[4];
     buffer[0] = 0;
-    buffer[1] = (m_viewport.height / 8) - 1;
+    buffer[1] = (m_viewport.width / 8) - 1;
     sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
 
     buffer[0] = 0;
     buffer[1] = 0;
-    buffer[2] = m_viewport.width - 1;
-    buffer[3] = (m_viewport.width - 1) >> 8;
+    buffer[2] = m_viewport.height - 1;
+    buffer[3] = (m_viewport.height - 1) >> 8;
     sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
 
-    buffer[0] = m_viewport.width - 1;
-    buffer[1] = (m_viewport.width - 1) >> 8;
+    buffer[0] = m_viewport.height - 1;
+    buffer[1] = (m_viewport.height - 1) >> 8;
     buffer[2] = 0;
     sendDevCommand( kCmdSsd1681DriverOutput, buffer, 3 );
 
@@ -336,7 +336,8 @@ void I2cSsd1681::setBuffer(uint8_t *pBuffer)
 void I2cSsd1681::clearScreenBuffer(void)
 {
     // Clear out the screen buffer on the device
-    uint8_t emptyPage[kPageMax] = {0};
+    uint8_t emptyPage[kPageMax];
+    memset(emptyPage, COLOR_OFF, kPageMax); // OFF = 0. Becomes White due to inversion
 
     for (int i = 0; i < kMaxPageNumberSSD1681; i++)
     {
@@ -361,7 +362,7 @@ void I2cSsd1681::initBuffers(void)
 
     // clear out the local graphics buffer
     if (m_pBuffer)
-        memset(m_pBuffer, 0, m_viewport.width * m_nPages);
+        memset(m_pBuffer, COLOR_OFF, m_viewport.height * m_nPages);
 
     // Set page descs to "clean" state
     for (i = 0; i < m_nPages; i++)
@@ -440,8 +441,8 @@ void I2cSsd1681::erase(void)
             continue;
 
         // clear out memory that is dirty on this page
-        memset(m_pBuffer + i * m_viewport.width + m_pageState[i].xmin, 0,
-               m_pageState[i].xmax - m_pageState[i].xmin + 1); // add one b/c values are 0 based
+        memset(m_pBuffer + i * m_viewport.height + m_pageState[i].ymin, COLOR_OFF,
+               m_pageState[i].ymax - m_pageState[i].ymin + 1); // add one b/c values are 0 based
 
         // clear out any pending dirty range for this page - it's erased
         pageSetClean(m_pageState[i]);
@@ -466,113 +467,113 @@ void I2cSsd1681::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
     if (x >= m_viewport.width || y >= m_viewport.height)
         return; // out of bounds
 
-    uint8_t bit = byte_bits[mod_byte(y)];
+    uint8_t bit = gfx_byte_bits[mod_byte(x)];
 
-    m_rasterOps[m_rop](m_pBuffer + x + y / kByteNBits * m_viewport.width, // pixel offset
-                       (clr == COLOR_BLACK ? bit : 0), bit);                             // which bit to set in byte
+    m_rasterOps[m_rop](m_pBuffer + y + x / kByteNBits * m_viewport.height, // pixel offset
+                       (clr == COLOR_ON ? bit : 0), bit);                  // which bit to set in byte
 
-    pageCheckBounds(m_pageState[y / kByteNBits],
-                    x); // update dirty range for page
-}
-////////////////////////////////////////////////////////////////////////////////////
-// draw_line_horz()
-//
-// Fast horizontal line drawing routine
-//
-
-void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
-{
-    // Basically we set a bit within a range in a page of our graphics buffer.
-
-    // in range
-    if (y0 >= m_viewport.height)
-        return;
-
-    if (x0 > x1)
-        swap_int(x0, x1);
-
-    if (x1 >= m_viewport.width)
-        x1 = m_viewport.width - 1;
-
-    uint8_t bit = byte_bits[mod_byte(y0)];   // bit to set
-    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
-
-    // Get the start of this line in the graphics buffer
-    uint8_t *pBuffer = m_pBuffer + x0 + y0 / kByteNBits * m_viewport.width;
-
-    // walk up x and set the target pixel using the pixel operator function
-    for (int i = x0; i <= x1; i++, pBuffer++)
-        curROP(pBuffer, (clr == COLOR_BLACK ? bit : 0), bit);
-
-    // Mark the page dirty for the range drawn
-    pageCheckBoundsRange(m_pageState[y0 / kByteNBits], x0, x1);
+    pageCheckBounds(m_pageState[x / kByteNBits],
+                    y); // update dirty range for page
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_line_vert()
 //
-// Fast vertical line drawing routine - also supports fast filled rects
+// Fast horizontal line drawing routine
 //
+
 void I2cSsd1681::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
-    if (x0 >= m_viewport.width) // out of bounds
+    // Basically we set a bit within a range in a page of our graphics buffer.
+
+    // in range
+    if (x0 >= m_viewport.width)
         return;
 
-    // want an accending order
     if (y0 > y1)
         swap_int(y0, y1);
 
-    // keep on screen
     if (y1 >= m_viewport.height)
         y1 = m_viewport.height - 1;
+
+    uint8_t bit = gfx_byte_bits[mod_byte(x0)];   // bit to set
+    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
+
+    // Get the start of this line in the graphics buffer
+    uint8_t *pBuffer = m_pBuffer + y0 + x0 / kByteNBits * m_viewport.height;
+
+    // walk up x and set the target pixel using the pixel operator function
+    for (int i = y0; i <= y1; i++, pBuffer++)
+        curROP(pBuffer, (clr == COLOR_ON ? bit : 0), bit);
+
+    // Mark the page dirty for the range drawn
+    pageCheckBoundsRange(m_pageState[x0 / kByteNBits], y0, y1);
+}
+////////////////////////////////////////////////////////////////////////////////////
+// draw_line_horz()
+//
+// Fast vertical line drawing routine - also supports fast filled rects
+//
+void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
+{
+    if (y0 >= m_viewport.height) // out of bounds
+        return;
+
+    // want an accending order
+    if (x0 > x1)
+        swap_int(x0, x1);
+
+    // keep on screen
+    if (x1 >= m_viewport.width)
+        x1 = m_viewport.width - 1;
 
     uint8_t startBit, endBit, setBits;
 
     // Get the start and end pages we are writing to
-    uint8_t page0 = y0 / kByteNBits;
-    uint8_t page1 = y1 / kByteNBits;
+    uint8_t page0 = x0 / kByteNBits;
+    uint8_t page1 = x1 / kByteNBits;
 
     // loop over the pages. For each page determine the range of pixels
     // to set in the target page byte and then set them using the current
     // pixel operator function
 
     // Note: This function can also be used to draw filled rects - just iterate
-    //       in the x direction. The base rect fill (in grBuffer) calls this
-    //       method x1-x0 times, and each of those calls has some overhead. So
-    //       just iterating over each page - x1-x0 times here - saves overhead
+    //       in the y direction. The base rect fill (in grBuffer) calls this
+    //       method y1-y0 times, and each of those calls has some overhead. So
+    //       just iterating over each page - y1-y0 times here - saves overhead
     //       costs.
     //
-    //       To make this work, make sure x0 > x1. Also, this method is wired in
+    //       To make this work, make sure y0 > y1. Also, this method is wired in
     //       as the draw_rect_filled entry in the draw interface. This is done
     //       above in the init process.
 
-    int xinc;
-    if (x0 > x1)
-        swap_int(x0, x1);
+    int yinc;
+    if (y0 > y1)
+        swap_int(y0, y1);
 
     rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
 
     for (int i = page0; i <= page1; i++)
     {
-        startBit = mod_byte(y0); // start bit in this byte
+        startBit = mod_byte(x0); // start bit in this byte
 
         // last bit of this byte to set? Does the line end in this byte, or continue
         // on...
-        endBit = y0 + kByteNBits - startBit > y1 ? mod_byte(y1) : kByteNBits - 1;
+        endBit = x0 + kByteNBits - startBit > x1 ? mod_byte(x1) : kByteNBits - 1;
 
         // Set the bits from startBit to endBit
-        setBits = (0xFF >> ((kByteNBits - endBit) - 1)) << startBit; // what bits are being set in this byte
+        setBits = (0xFF << ((kByteNBits - endBit) - 1)) >> startBit; // what bits are being set in this byte
 
         // set the bits in the graphics buffer using the current byte operator
         // function
 
-        // Note - We iterate over x to fill in a rect if specified.
-        for (xinc = x0; xinc <= x1; xinc++)
-            curROP(m_pBuffer + i * m_viewport.width + xinc, (clr == COLOR_BLACK ? setBits : 0), setBits);
+        // Note - We iterate over y to fill in a rect if specified.
+        for (yinc = y0; yinc <= y1; yinc++)
+            curROP(m_pBuffer + i * m_viewport.height + yinc, (clr == COLOR_ON ? setBits : 0), setBits);
 
-        y0 += endBit - startBit + 1; // increment Y0 to next page
+        x0 += endBit - startBit + 1; // increment x0 to next page
 
-        pageCheckBoundsRange(m_pageState[i], x0,
-                             x1); // mark dirty range in page desc
+        pageCheckBoundsRange(m_pageState[i], y0,
+                             y1); // mark dirty range in page desc
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -585,13 +586,13 @@ void I2cSsd1681::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t h
     uint8_t x1 = x0 + width - 1;
     uint8_t y1 = y0 + height - 1;
 
-    // just call vert line
-    drawLineVert(x0, y0, x1, y1, clr);
+    // just call horz line
+    drawLineHorz(x0, y0, x1, y1, clr);
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_bitmap()
 //
-// Draw a 8 bit encoded (aka same y layout as this device) bitmap to the screen
+// Draw a 8 bit encoded bitmap to the screen
 //
 
 void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t dst_height, uint8_t *pBitmap,
@@ -614,94 +615,30 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
     if (bmp_height < dst_height)
         dst_height = bmp_height;
 
-    // current position in the bitmap
-    uint8_t bmp_x = 0;
-    uint8_t bmp_y = 0;
-
-    uint8_t page0, page1;
-    uint8_t startBit, endBit, grSetBits, grStartBit;
-
-    uint8_t bmp_mask[2], bmp_data, bmpPage;
-    uint8_t remainingBits, neededBits;
-
-    uint8_t y1 = y0 + dst_height - 1;
-
-    page0 = y0 / kByteNBits;
-    page1 = y1 / kByteNBits;
-
-    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
-
     // The Plan:
-    //   - Walk down the graphics buffer range (y) one page at a time
-    //   - For each page
-    //          - Determine needed number of bits for the destination
-    //          - Determine what bits to pull from the bitmap
-    //              - Create a mask to pull out bits - from one or two bytes
-    //          - Loop over the x dimension
-    //              - pull bits from bitmap, build byte of data of bitmap bits, in
-    //                right order for the destination (graphics buffer)
-    //              - Write the bitmap bits to the graphis buffer using the
-    //              current operator
+    //   - The BMP data is arranged in columns which made it easier when copying
+    //     into OLED horizontal pages
+    //   - For the SSD1681, the pages are vertical, so this gets gnarly...
+    //     We can either read a column byte and set its bits in the appropriate
+    //     page rows
+    //     Or we can just scan each pixel in turn and set that pixel as needed...
+    //     Scanning is slow, but I don't think bytes to rows would be much faster?
 
-    // Loop over the memory pages in the graphics buffer
-    for (int iPage = page0; iPage <= page1; iPage++)
+    for (uint16_t y = 0; y < dst_height; y++)
     {
-        // First, get the number of destination bits in the current page
-        grStartBit = mod_byte(y0); // start bit
-
-        // last bit of this byte to set? Does the copy region end in this byte, or
-        // continue on...
-        endBit = y0 + kByteNBits - grStartBit > y1 ? mod_byte(y1) : kByteNBits - 1;
-
-        // Set the bits from startBit to endBit
-        grSetBits = (0xFF >> (kByteNBits - endBit - 1)) << grStartBit; // what bits are being set in this byte
-
-        // how many bits of data do we need to transfer from the bitmap?
-        neededBits = endBit - grStartBit + 1;
-
-        // Okay, we have how much data to transfer to the current page. Now build
-        // the data from the bitmap.
-
-        // First, build bit masks for pulling the data out of the bmp array. The
-        // data might straddle two bytes, so build two masks
-
-        // as above, get the start and end bites for the current position in the
-        // bmp.
-        startBit = mod_byte(bmp_y);
-        endBit = (kByteNBits - startBit > neededBits ? startBit + neededBits : kByteNBits) - 1;
-
-        // Set the bits from startBit to endBit
-        bmp_mask[0] = (0xFF >> (kByteNBits - endBit - 1)) << startBit;
-
-        // any remaining bits to get?
-        remainingBits = neededBits - (endBit - startBit + 1); // +1 - needsBits is 1's based
-        bmp_mask[1] = 0xFF >> (kByteNBits - remainingBits);
-
-        // What row in the source bitmap
-        bmpPage = bmp_y / kByteNBits;
-
-        // we have the mask for the bmp - loop over the width of the copy region,
-        // pulling out bmp data and writing it to the graphics buffer
-        for (bmp_x = 0; bmp_x < dst_width; bmp_x++)
+        uint16_t row = y / kByteNBits;
+        for (uint16_t x = 0; x < dst_width; x++)
         {
-            // get data bits out of current bitmap location and shift if needed
-            bmp_data = (pBitmap[bmp_width * bmpPage + bmp_x] & bmp_mask[0]) >> startBit;
+            uint16_t bytePtr = x + (row * bmp_width);
+            uint8_t bitInByte = y % kByteNBits;
+            uint8_t bitMask = gfx_byte_bits[(kByteNBits - 1) - bitInByte];
+            uint8_t theByte = pBitmap[bytePtr];
+            uint8_t color = (theByte & bitMask) ? COLOR_ON : COLOR_OFF;
+            drawPixel(x0 + x, y0 + y, color);
 
-            if (remainingBits) // more data to add from the next byte in this column
-                bmp_data |= (pBitmap[bmp_width * (bmpPage + 1) + bmp_x] & bmp_mask[1]) << (neededBits - remainingBits);
-
-            // Write the bmp data to the graphics buffer - using current write op.
-            // Note, if the location in the buffer didn't start at bit 0, we shift
-            // bmp_data
-            curROP(m_pBuffer + iPage * m_viewport.width + bmp_x + x0, bmp_data << grStartBit, grSetBits);
+            pageCheckBoundsRange(m_pageState[(x0 + x) / kByteNBits], y0,
+                                 y0 + dst_height - 1); // mark dirty range in page desc
         }
-        // move up our y values (graphics buffer and bitmap) by the number of bits
-        // transferred
-        y0 += neededBits;
-        bmp_y += neededBits;
-
-        pageCheckBoundsRange(m_pageState[iPage], x0,
-                             x0 + dst_width - 1); // mark dirty range in page desc
     }
 }
 
@@ -713,7 +650,7 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
 // Sets the target screen buffer address for graphics buffer transfer to the
 // device.
 //
-// The positon is specified by page and column
+// The positon is specified by page and row
 //
 // The system runs in "page mode" - data is streamed along a page, based
 // on the set starting position.
@@ -722,27 +659,28 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
 // page.
 //
 
-bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t column)
+bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
 {
-    if (page >= m_nPages || column >= m_viewport.width)
+    if (page >= m_nPages || row >= m_viewport.height)
         return false;
 
     uint8_t buffer[4];
-    buffer[0] = page;
-    buffer[1] = page + 1;
-    sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
+    
+    // buffer[0] = page;
+    // buffer[1] = page + 1;
+    // sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
 
-    buffer[0] = column;
-    buffer[1] = column >> 8;
-    buffer[2] = (m_viewport.width - 1) - column;
-    buffer[3] = ((m_viewport.width - 1) - column) >> 8;
-    sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
+    // buffer[0] = row;
+    // buffer[1] = row >> 8; // 0 (row is uint8_t)
+    // buffer[2] = (m_viewport.height - 1) - row;
+    // buffer[3] = ((m_viewport.height - 1) - row) >> 8; // 0 (row is uint8_t)
+    // sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
     sendDevCommand( kCmdSsd1681SetRamCounterX, buffer, 1 );
 
-    buffer[0] = column;
-    buffer[1] = 0;
+    buffer[0] = row;
+    buffer[1] = row >> 8; // 0 (row is uint8_t)
     sendDevCommand( kCmdSsd1681SetRamCounterY, buffer, 2 );
 
     return true;
@@ -780,13 +718,13 @@ void I2cSsd1681::display(bool partial)
 
         // set the start address to write the updated data to the devices screen
         // buffer
-        setScreenBufferAddress(i, transferRange.xmin);
+        setScreenBufferAddress(i, transferRange.ymin);
 
         sendDevCommand(kCmdSsd1681WriteRam1);
 
         // send the dirty data to the device
-        sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.xmin, // this page start + xmin
-                    transferRange.xmax - transferRange.xmin + 1); // dirty region xmax - xmin. Add 1 b/c 0 based
+        sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.ymin, // this page start + ymin
+                    transferRange.ymax - transferRange.ymin + 1); // dirty region ymax - ymin. Add 1 b/c 0 based
 
         delay(2); // Wait for I2C->SPI at 1MHz
 

@@ -30,7 +30,7 @@
 
 /*
  * Header file for the SSD1681 bitmap graphics driver device.
- */
+*/
 
 #pragma once
 
@@ -101,11 +101,12 @@ typedef struct {
 
 const ssd1681InitCodeEntry ssd1681InitCode[] = {
   { kCmdSsd1681SwReset, 0, { 0 }, true, 20 },
-  { kCmdSsd1681DataEntryMode, 1, { 0x07 }, false, 0 }, // Update in Y direction, Y increment, X increment
+  { kCmdSsd1681DataEntryMode, 1, { 0x07 }, false, 0 }, // **Update in Y direction**, Y increment, X increment
   { kCmdSsd1681WriteBorder, 1, { 0x05 }, false, 0 }, // Follow LUT1
   { kCmdSsd1681TempSensorControl, 1, { 0x80 }, false, 0 }, // Internal temperature sensor
   { kCmdSsd1681SetRamCounterX, 1, { 0 }, false, 0 },
   { kCmdSsd1681SetRamCounterY, 2, { 0, 0 }, false, 0 },
+  { kCmdSsd1681DisplayUpdateCtrl1, 1, { 0x48 }, false, 0 }, // Bypass Red RAM, **Inverse** BW RAM content
 };
 
 const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681InitCodeEntry);
@@ -114,40 +115,64 @@ const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681In
 // Buffer Management
 /////////////////////////////////////////////////////////////////////////////
 //
+// SSD1681 supports up to 200 rows and 200 columns
+// Each memory byte contains the pixels for 8 columns
+// (For the SSD1306: each byte contains the pixels for 8 rows / COM lines)
+// By default: white pixels are '1', black are '0', but UpdateCtrl1 can invert this
+// Because this library is hard-wired to expect 'off' pixels to be '0' and 'on' pixels to be '1',
+// it is MUCH easier if we use the inversion...
+// On SSD1681, the 25 'pages' run vertically, not horizontally
+// By default: addresses increase in the X direction: byte 0 is row 1 cols 1-8, byte 1 is row 1 cols 9-16, etc.
+// But Data Entry Mode can select Y-increase instead: byte 0 is row 1 cols 1-8, byte 2 is row 2 cols 1-8
+// Basically, the memory is rotated and flipped compared to the SSD1306, and the pixels are inverted too...
+//
+// The 'pages' are arranged like this:
+//
+//  _  _  _  _  _  _  _
+// | || || || || || || | < Row 0
+// | || || || || || || | < Row 1
+// | || || || || || || | < Row 2
+// | || || || || || || |
+// | || || || || || || |
+// | || || || || || || |
+// |_||_||_||_||_||_||_|
+//         ^- Page 2
+//     ^- Page 1
+//   ^- Page 0
+//
 // The memory/back buffer of the SSD1681 is based on the concept of pages -
-// each page is a stream of bytes, and defined as follows:
+// each page is a stream of bytes, and - with addresses increasing in Y - is defined as follows:
 //
-//      - X pixel position is an offset in a byte array
-//      - Y pixel position is a bit in a byte, so a page can have 8 Y locations
+//      - X pixel position is a bit in a byte, so a page can have 8 X locations
+//      - Y pixel position is an offset in a byte array
 //
-// A pixel value of 1, turn on the corresponding pixel, 0 turns it off.
-//
-// The device has different data transfer modes - see the data sheet - mostly
-// outline how received a recieved byte is placed in the device framebuffer and the
-// next update locaton set.
+// With inversion, a pixel value of 0 is 'off' (white), 1 id 'on' (black)
 //
 // This implementation uses the Page mode for buffer transfer. This is defined by:
-//     - A start position is set - a page number and column in that page.
+//     - A start position is set - a page number and row in that page.
 //     - As data is transferred, it is written to the screenbuffer, based on this start
 //       position
-//     - If the end of the page is reached, the next entry location is the start of that page
+//     - If the end of the page is reached, the next entry location is the start of the next page
 //
 // >> Implementation <<
 //
 // This implementation uses the concept of "dirty rects" at the page level to minimize data
-// transfers to the device. The min and max x locations set for each page is recorded as
-// graphics are draw to the graphics buffer. When the transfering the display buffer to
+// transfers to the device. The min and max Y locations set for each page is recorded as
+// graphics are drawn to the graphics buffer. When the transfering the display buffer to
 // the devices screen buffer, the following takes place:
 //
 //      For each page:
 //          - if page is dirty
-//              - Set the screen buffer current location to this page, xmin dirty value
-//              - Write buffer bytes to the device - starting at xmin for the page, ending at xmax
+//              - Set the screen buffer current location to this page, ymin dirty value
+//              - Write buffer bytes to the device - starting at ymin for the page, ending at ymax
 //              - Mark the buffer as "clean"
 //
 //
 
 #define kMaxPageNumberSSD1681 25 // 200 / 8
+
+// Handy helper
+const uint8_t gfx_byte_bits[8] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 
 /////////////////////////////////////////////////////////////////////////////
 // I2cSsd1681
@@ -190,9 +215,6 @@ class I2cSsd1681 : public QwGrBufferDevice
     // Set the current color/pixel write operation
     void setColor(uint8_t color);
 
-    // Settings/operational methods
-    void setContrast(uint8_t);
-
     // default address of the device - expect the sub to fill in.
     uint8_t default_address;
 
@@ -206,7 +228,7 @@ class I2cSsd1681 : public QwGrBufferDevice
         return m_rop;
     }
 
-    void displayPower(bool enable = true);
+    void displayPower(bool enable = true); // false = deep sleep. Only a hardware reset can wake it again
 
   protected:
     // Subclasses of this class define the specifics of the device, including size.
@@ -236,7 +258,7 @@ class I2cSsd1681 : public QwGrBufferDevice
 
   private:
     // Internal buffer management methods
-    bool setScreenBufferAddress(uint8_t page, uint8_t column);
+    bool setScreenBufferAddress(uint8_t page, uint8_t row);
     void initBuffers(void); // clear graphics and screen buffer
     void clearScreenBuffer(void);
     void resendGraphics(void);

@@ -49,8 +49,8 @@ struct QwRect
     uint16_t height;
 };
 
-extern const uint8_t COLOR_BLACK;
-extern const uint8_t COLOR_WHITE;
+extern const uint8_t COLOR_ON;
+extern const uint8_t COLOR_OFF;
 
 //////////////////////////////////////////////////////////////////////////////////
 // Utils
@@ -58,7 +58,7 @@ extern const uint8_t COLOR_WHITE;
 // Bit level tools/helpers
 //
 // Handy const = save some compute used bit shifting
-extern const uint8_t byte_bits[8];
+const uint8_t text_byte_bits[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
 // something more readable
 #define kByteNBits 8
@@ -208,15 +208,15 @@ class QwGrBufferDevice : protected _QwIDraw
     bool getStringSize(const char *text, uint16_t &width, uint16_t &height);
 
     // Public Interface - Graphics interface
-    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_BLACK);
+    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON);
 
-    void circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_BLACK);
-    void circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_BLACK);
+    void circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_ON);
+    void circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_ON);
 
-    void pixel(uint8_t x, uint8_t y, uint8_t clr = COLOR_BLACK);
+    void pixel(uint8_t x, uint8_t y, uint8_t clr = COLOR_ON);
 
-    void rectangle(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_BLACK);
-    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_BLACK);
+    void rectangle(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON);
+    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON);
 
     void bitmap(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *pBitmap, uint8_t bmp_width,
                 uint8_t bmp_height);
@@ -227,7 +227,7 @@ class QwGrBufferDevice : protected _QwIDraw
     // Bitmap draw - using a bitmap object
     void bitmap(uint8_t x0, uint8_t y0, QwBitmap &bitmap);
 
-    void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_BLACK);
+    void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_ON);
 
     // subclass interface
     virtual void display(bool partial) = 0;

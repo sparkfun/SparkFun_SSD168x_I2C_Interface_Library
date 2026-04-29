@@ -55,9 +55,6 @@
 // default font
 #include "res/qw_fnt_5x7.h"
 
-// Handy helper
-const uint8_t byte_bits[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
-
 ////////////////////////////////////////////////////////////////////////////////////
 // vTable/IDraw Interface Routines
 ////////////////////////////////////////////////////////////////////////////////////
@@ -629,7 +626,7 @@ void QwGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint8_
 
                 // draw bits
                 for (j = 0; j < kByteNBits; j++)
-                    if (currChar & byte_bits[j])
+                    if (currChar & text_byte_bits[j])
                         (*m_idraw.drawPixel)(this, x0 + i, y0 + j + rowOffset, clr);
 
             } // walk font width

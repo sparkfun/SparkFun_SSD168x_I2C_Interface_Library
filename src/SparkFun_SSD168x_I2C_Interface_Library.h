@@ -40,8 +40,8 @@
 typedef QwFont QwiicFont;
 typedef QwBitmap QwiicBitmap;
 
-const uint8_t COLOR_WHITE = 1; // SSD168x White pixels are '1'
-const uint8_t COLOR_BLACK = 0; // SSD168x Black pixels are '0'
+const uint8_t COLOR_ON = 1; // 1 indicates the pixel is 'on': black on e-paper (inverted)
+const uint8_t COLOR_OFF = 0; // 0 indicates the pixel is 'off': white on e-paper (inverted)
 
 // The Plan:
 //
@@ -97,7 +97,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 
         // defaults for Arduino Print
         setCursor(0, 0);
-        setColor(COLOR_BLACK);
+        setColor(COLOR_ON);
 
         m_i2cBus.init(wirePort);
 
@@ -347,8 +347,8 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //  grROPNotCopy    A not operation is applied to the source value before copying to screen
     //  grROPNot        A not operation is applied to the destination (screen) value
     //  grROPXOR        A XOR operation is performed between the source and destination values
-    //  grROPBlack      A value of 0, or black is drawn to the destination
-    //  grROPWhite      A value of 1, or white is drawn to the destination
+    //  grROPOff        A value of 0, or 'OFF' is drawn to the destination
+    //  grROPOn         A value of 1, or 'ON' is drawn to the destination
 
     void setDrawMode(grRasterOp_t rop)
     {
@@ -384,7 +384,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //  y           The Y coordinate of the pixel to set
     //  clr         optional The color value to set the pixel. This defaults to white (1).
 
-    void pixel(uint8_t x, uint8_t y, uint8_t clr = COLOR_BLACK)
+    void pixel(uint8_t x, uint8_t y, uint8_t clr = COLOR_ON)
     {
         m_device.pixel(x, y, clr);
     }
@@ -405,7 +405,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // y1           The end Y coordinate of the line
     // clr          optional The color value to draw the line. This defaults to white (1).
 
-    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_BLACK)
+    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON)
     {
         m_device.line(x0, y0, x1, y1, clr);
     }
@@ -423,7 +423,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // height       The height of the rectangle
     // clr          optional The color value to draw the rectangle. This defaults to white (1).
 
-    void rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_BLACK)
+    void rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_ON)
     {
         m_device.rectangle(x0, y0, width, height, clr);
     }
@@ -441,7 +441,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // height       The height of the rectangle
     // clr          optional The color value to draw the filled rectangle. This defaults to white (1).
 
-    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_BLACK)
+    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_ON)
     {
         m_device.rectangleFill(x0, y0, width, height, clr);
     }
@@ -458,7 +458,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // radius       The radius of the circle
     // clr          optional The color value to draw the circle. This defaults to white (1).
 
-    void circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_BLACK)
+    void circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_ON)
     {
         m_device.circle(x0, y0, radius, clr);
     }
@@ -475,7 +475,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // radius       The radius of the circle
     // clr          optional The color value to draw the circle. This defaults to white (1).
 
-    void circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_BLACK)
+    void circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr = COLOR_ON)
     {
         m_device.circleFill(x0, y0, radius, clr);
     }
@@ -548,12 +548,12 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // text         The string to draw on the screen
     // clr          optional The color value to draw the text. This defaults to white (1).
 
-    void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_BLACK)
+    void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_ON)
     {
         m_device.text(x0, y0, text, clr);
     }
 
-    void text(uint8_t x0, uint8_t y0, String &text, uint8_t clr = COLOR_BLACK)
+    void text(uint8_t x0, uint8_t y0, String &text, uint8_t clr = COLOR_ON)
     {
 
         m_device.text(x0, y0, text.c_str(), clr);
@@ -593,11 +593,12 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     // Parameter    Description
     // ---------    -----------------------------
-    //  clr         The color to set. 0 = black, > 0 = white
+    //  clr         The color to set.
+    //              'ON' is e-paper BLACK (due to inversion); 'OFF' is e-paper WHITE
 
     void setColor(uint8_t clr)
     {
-        m_color = (clr == COLOR_BLACK ? COLOR_BLACK : COLOR_WHITE);
+        m_color = (clr == COLOR_OFF ? COLOR_OFF : COLOR_ON);
     }
 
     ///////////////////////////////////////////////////////////////////////
