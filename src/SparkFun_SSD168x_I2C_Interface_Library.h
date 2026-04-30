@@ -31,7 +31,11 @@
 #pragma once
 
 // include the underlying SDK implementation headers for the SSD168x devices
-#include "qwiic_ssd168x_custom.h"
+#include "qwiic_ssd1680_184x88.h"
+#include "qwiic_ssd1681_200x200.h"
+#include "qwiic_ssd1680_custom.h"
+#include "qwiic_ssd1681_custom.h"
+#include "qwiic_ssd1680_184x88_rotated.h"
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -660,7 +664,17 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 ///////////////////////////////////////////////////////////////////////
 // For our actual implementations - just subclass from the above Arduino template
 
-class SSD168xI2CCustom : public SSD168xI2CBaseClass<I2cSsd168xCustom>
+class SSD1680I2C184x88 : public SSD168xI2CBaseClass<I2cSsd1680_184x88>
+{
+    // nothing here - see above
+};
+
+class SSD1681I2C200x200 : public SSD168xI2CBaseClass<I2cSsd1681_200x200>
+{
+    // nothing here - see above
+};
+
+class SSD1680I2CCustom : public SSD168xI2CBaseClass<I2cSsd1680_Custom>
 {
   public:
     void setXOffset(uint8_t xOffset)
@@ -679,4 +693,30 @@ class SSD168xI2CCustom : public SSD168xI2CBaseClass<I2cSsd168xCustom>
     {
         m_device.setDisplayHeight(displayHeight);
     }
+};
+
+class SSD1681I2CCustom : public SSD168xI2CBaseClass<I2cSsd1681_Custom>
+{
+  public:
+    void setXOffset(uint8_t xOffset)
+    {
+        m_device.setXOffset(xOffset);
+    }
+    void setYOffset(uint8_t yOffset)
+    {
+        m_device.setYOffset(yOffset);
+    }
+    void setDisplayWidth(uint8_t displayWidth)
+    {
+        m_device.setDisplayWidth(displayWidth);
+    }
+    void setDisplayHeight(uint8_t displayHeight)
+    {
+        m_device.setDisplayHeight(displayHeight);
+    }
+};
+
+class SSD1680I2C184x88Rotated : public SSD168xI2CBaseClass<I2cSsd1680_184x88_Rotated>
+{
+    // nothing here - see above
 };

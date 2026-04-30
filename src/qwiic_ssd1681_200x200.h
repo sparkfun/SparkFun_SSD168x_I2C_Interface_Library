@@ -1,4 +1,4 @@
-// qwiic_grcommon.h
+// qwiic_ssd1681_200x200.h
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
@@ -28,35 +28,55 @@
 //    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 //    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// Common defines for multiple 
-// TODO: Probably should rework how this looks eventually...
-
-/////////////////////////////////////////////////////////////////////////////
-// The graphics Raster Operator functions (ROPS)
-/////////////////////////////////////////////////////////////////////////////
-//      - Copy      - copy the pixel value in to the buffer (default)
-//      - Not Copy  - copy the not of the pixel value to buffer
-//      - Not       - Set the buffer value to not it's current value
-//      - XOR       - XOR of color and current pixel value
-//      - Off       - Set value to always be Off
-//      - On        - set value to always be On
+// Implementation for a generic 200x200 SSD1681 device
 
 #pragma once
 
-#include <stdint.h>
+#include "i2c_ssd1681.h"
 
-typedef enum gr_op_funcs_
-{
-    grROPCopy = 0,
-    grROPNotCopy = 1,
-    grROPNot = 2,
-    grROPXOR = 3,
-    grROPOff = 4,
-    grROPOn = 5
-} grRasterOp_t;
+//////////////////////////////////////////////////////////////////
+// Set the defaults for a generic 200x200 SSD1681 display
 
-typedef struct
-{
-    int16_t min;
-    int16_t max;
-} pageState_t;
+#define kI2cSsd1681200x200Width 200
+#define kI2cSsd1681200x200Height 200
+
+#define kI2cSsd1681200x200XOffset 0
+#define kI2cSsd1681200x200YOffset 0
+
+#define kI2cSsd1681200x200DefaultAddress 0x48
+
+class I2cSsd1681_200x200 : public I2cSsd1681 {
+
+public:
+    // Constructor - setup the viewport and default address for this device.
+    I2cSsd1681_200x200()
+        : I2cSsd1681(kI2cSsd1681200x200XOffset, kI2cSsd1681200x200YOffset, kI2cSsd1681200x200Width, kI2cSsd1681200x200Height)
+    {
+        default_address = kI2cSsd1681200x200DefaultAddress;
+    };
+
+    ~I2cSsd1681_200x200()
+    {
+        if (m_graphicsBuffer != nullptr)
+        {
+            delete[] m_graphicsBuffer;
+            m_graphicsBuffer = nullptr;
+        }
+    };
+
+    // set up the specific device settings
+    bool init(void)
+    {
+        if (m_graphicsBuffer != nullptr)
+            delete[] m_graphicsBuffer;
+        m_graphicsBuffer = new uint8_t[(uint16_t)kI2cSsd1681200x200Width * (uint16_t)kI2cSsd1681200x200Height / 8];
+        this->I2cSsd1681::setBuffer(m_graphicsBuffer); // The buffer to use
+
+        // Call the super class to do all the work
+        return this->I2cSsd1681::init();
+    };
+
+private:
+    // Graphics buffer for this device.
+    uint8_t *m_graphicsBuffer = nullptr;
+};

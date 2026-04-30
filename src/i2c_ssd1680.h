@@ -1,4 +1,4 @@
-// i2c_ssd1681.h
+// i2c_ssd1680.h
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
@@ -29,100 +29,29 @@
 //    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /*
- * Header file for the SSD1681 bitmap graphics driver device.
+ * Header file for the SSD1680 bitmap graphics driver device.
 */
 
 #pragma once
 
+#include "i2c_ssd1680_defs.h"
 #include "qwiic_grbuffer.h"
 #include "qwiic_i2c.h"
 #include "res/qwiic_resdef.h"
 #include "qwiic_grcommon.h"
 
 /////////////////////////////////////////////////////////////////////////////
-// Device Commands
-//
-// The commands are codes used to communicate with the SSD1681 device and are
-// from the devices datasheet.
-//
-
-#define kCmdSsd1681DriverOutput 0x01
-#define kCmdSsd1681GateDrivingVoltage 0x03
-#define kCmdSsd1681SourceDrivingVoltage 0x04
-#define kCmdSsd1681ProgramInitialSetting 0x08
-#define kCmdSsd1681ProgramRegisterWrite 0x09
-#define kCmdSsd1681ProgramRegisterRead 0x0A
-#define kCmdSsd1681BoostSoftStart 0x0C
-#define kCmdSsd1681DeepSleep 0x10
-#define kCmdSsd1681DataEntryMode 0x11
-#define kCmdSsd1681SwReset 0x12
-#define kCmdSsd1681HVReadyDetect 0x14
-#define kCmdSsd1681VCIDetect 0x15
-#define kCmdSsd1681TempSensorControl 0x18
-#define kCmdSsd1681TempSensorWrite 0x1A
-#define kCmdSsd1681TempSensorRead 0x1B
-#define kCmdSsd1681MasterActivate 0x20
-#define kCmdSsd1681DisplayUpdateCtrl1 0x21
-#define kCmdSsd1681DisplayUpdateCtrl2 0x22
-#define kCmdSsd1681WriteRamBW 0x24
-#define kCmdSsd1681WriteRamRed 0x26
-#define kCmdSsd1681ReadRam 0x27
-#define kCmdSsd1681WriteVcom 0x2C
-#define kCmdSsd1681ReadOtp 0x2D
-#define kCmdSsd1681ReadUserID 0x2E
-#define kCmdSsd1681ReadStatus 0x2F
-#define kCmdSsd1681WriteLut 0x32
-#define kCmdSsd1681WriteBorder 0x3C
-#define kCmdSsd1681SetRamPosX 0x44
-#define kCmdSsd1681SetRamPosY 0x45
-#define kCmdSsd1681AutoWriteRed 0x46
-#define kCmdSsd1681AutoWriteBW 0x47
-#define kCmdSsd1681SetRamCounterX 0x4E
-#define kCmdSsd1681SetRamCounterY 0x4F
-#define kCmdSsd1681NOP 0x7F
-
-/////////////////////////////////////////////////////////////////////////////
-// Device Config
-/////////////////////////////////////////////////////////////////////////////
-//
-// Defaults
-// Each device can have a different Hardware pin configuration, which must
-// be set in the device. These are the pins that connect the display to
-// the SSD1681.
-//
-
-typedef struct {
-  const uint8_t command;
-  const uint8_t numFollowingBytes;
-  const uint8_t followingBytes[2];
-  const bool delayAfter;
-  const unsigned long delayDuration;
-} ssd1681InitCodeEntry;
-
-const ssd1681InitCodeEntry ssd1681InitCode[] = {
-  { kCmdSsd1681SwReset, 0, { 0 }, true, 20 },
-  { kCmdSsd1681DataEntryMode, 1, { 0x07 }, false, 0 }, // **Update in Y direction**, Y increment, X increment
-  { kCmdSsd1681WriteBorder, 1, { 0x05 }, false, 0 }, // Follow LUT1
-  { kCmdSsd1681TempSensorControl, 1, { 0x80 }, false, 0 }, // Internal temperature sensor
-  { kCmdSsd1681SetRamCounterX, 1, { 0 }, false, 0 },
-  { kCmdSsd1681SetRamCounterY, 2, { 0, 0 }, false, 0 },
-  { kCmdSsd1681DisplayUpdateCtrl1, 1, { 0x48 }, false, 0 }, // Bypass Red RAM, **Inverse** BW RAM content
-};
-
-const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681InitCodeEntry);
-
-/////////////////////////////////////////////////////////////////////////////
 // Buffer Management
 /////////////////////////////////////////////////////////////////////////////
 //
-// SSD1681 supports up to 200 rows and 200 columns
+// SSD1680 supports up to 296 rows and 176 columns
 // Each memory byte contains the pixels for 8 columns
 // (For the SSD1306: each byte contains the pixels for 8 rows / COM lines)
 // The MSB is the left-most pixel
 // By default: white pixels are '1', black are '0', but UpdateCtrl1 can invert this
 // Because this library is hard-wired to expect 'off' pixels to be '0' and 'on' pixels to be '1',
 // it is MUCH easier if we use the inversion...
-// On SSD1681, the 25 'pages' run vertically, not horizontally
+// On SSD1680, the 22 'pages' run vertically, not horizontally
 // By default: addresses increase in the X direction: byte 0 is row 0 cols 0-7, byte 1 is row 0 cols 8-15, etc.
 // But Data Entry Mode can select Y-increase instead: byte 0 is row 0 cols 0-7, byte 1 is row 1 cols 0-7
 // Basically, the memory is rotated and flipped compared to the SSD1306, and the pixels are inverted too...
@@ -143,7 +72,7 @@ const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681In
 //     ^- Page 1
 //  ^- Page 0
 //
-// The memory/back buffer of the SSD1681 is based on the concept of pages -
+// The memory/back buffer of the SSD1680 is based on the concept of pages -
 // each page is a stream of bytes, and - with addresses increasing in Y - is defined as follows:
 //
 //      - X pixel position is a bit in a byte, so a page can have 8 X locations
@@ -172,26 +101,24 @@ const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681In
 //
 //
 
-#define kMaxPageNumberSSD1681 25 // 200 / 8
-
 /////////////////////////////////////////////////////////////////////////////
-// I2cSsd1681
-// A buffer graphics device to support the SSD1681 graphics hardware
+// I2cSsd1680
+// A buffer graphics device to support the SSD1680 graphics hardware
 
-class I2cSsd1681 : public QwGrBufferDevice
+class I2cSsd1680 : public QwGrBufferDevice
 {
   private:
     void setupDefaults(void);
 
   public:
-    I2cSsd1681()
+    I2cSsd1680()
     {
         setupDefaults(); // default constructor - always called
     }
-    I2cSsd1681(uint8_t width, uint8_t height) : I2cSsd1681(0, 0, width, height){};
+    I2cSsd1680(uint8_t width, uint8_t height) : I2cSsd1680(0, 0, width, height){};
 
     // call super class
-    I2cSsd1681(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwGrBufferDevice(x0, y0, width, height)
+    I2cSsd1680(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwGrBufferDevice(x0, y0, width, height)
     {
         setupDefaults();
     };
@@ -276,8 +203,8 @@ class I2cSsd1681 : public QwGrBufferDevice
     // Buffer variables
     uint8_t *m_pBuffer;                      // Pointer to the graphics buffer
     uint8_t m_nPages;                        // number of pages for current device
-    pageState_t m_pageState[kMaxPageNumberSSD1681]; // page state descriptors
-    pageState_t m_pageErase[kMaxPageNumberSSD1681]; // keep track of erase boundaries
+    pageState_t m_pageState[kMaxPageNumberSSD1680]; // page state descriptors
+    pageState_t m_pageErase[kMaxPageNumberSSD1680]; // keep track of erase boundaries
     bool m_pendingErase;
 
     // display variables

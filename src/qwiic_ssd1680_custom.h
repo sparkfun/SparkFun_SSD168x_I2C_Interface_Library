@@ -1,4 +1,4 @@
-// qwiic_ssd168x_custom.h
+// qwiic_ssd1680_custom.h
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
@@ -32,30 +32,30 @@
 
 #pragma once
 
-#include "i2c_ssd1681.h"
+#include "i2c_ssd1680.h"
 
 //////////////////////////////////////////////////////////////////
-// Set the defaults for a generic 200x200 SSD1681 display
+// Set the defaults for a generic 184x88 SSD1680 display
 
-#define kI2cSsd168xCustomDefaultWidth 200
-#define kI2cSsd168xCustomDefaultHeight 200
+#define kI2cSsd1681184x88DefaultWidth 88
+#define kI2cSsd1681184x88DefaultHeight 184
 
-#define kI2cSsd168xCustomDefaultXOffset 0
-#define kI2cSsd168xCustomDefaultYOffset 0
+#define kI2cSsd1681184x88DefaultXOffset 0
+#define kI2cSsd1681184x88DefaultYOffset 0
 
-#define kI2cSsd168xCustomDefaultDefaultAddress 0x48
+#define kI2cSsd1681184x88DefaultAddress 0x48
 
-class I2cSsd168xCustom : public I2cSsd1681 {
+class I2cSsd1680_Custom : public I2cSsd1680 {
 
 public:
     // Constructor - setup the viewport and default address for this device.
-    I2cSsd168xCustom()
-        : I2cSsd1681(kI2cSsd168xCustomDefaultXOffset, kI2cSsd168xCustomDefaultYOffset, kI2cSsd168xCustomDefaultWidth, kI2cSsd168xCustomDefaultHeight)
+    I2cSsd1680_Custom()
+        : I2cSsd1680(kI2cSsd1681184x88DefaultXOffset, kI2cSsd1681184x88DefaultYOffset, kI2cSsd1681184x88DefaultWidth, kI2cSsd1681184x88DefaultHeight)
     {
-        default_address = kI2cSsd168xCustomDefaultDefaultAddress;
+        default_address = kI2cSsd1681184x88DefaultAddress;
     };
 
-    ~I2cSsd168xCustom()
+    ~I2cSsd1680_Custom()
     {
         if (m_graphicsBuffer != nullptr)
         {
@@ -67,15 +67,15 @@ public:
     // set up the specific device settings
     bool init(void)
     {
-        this->I2cSsd1681::setViewport(m_xOffset, m_yOffset, m_displayWidth, m_displayHeight);
+        this->I2cSsd1680::setViewport(m_xOffset, m_yOffset, m_displayWidth, m_displayHeight);
 
         if (m_graphicsBuffer != nullptr)
             delete[] m_graphicsBuffer;
         m_graphicsBuffer = new uint8_t[(uint16_t)m_displayWidth * (uint16_t)m_displayHeight / 8];
-        this->I2cSsd1681::setBuffer(m_graphicsBuffer); // The buffer to use
+        this->I2cSsd1680::setBuffer(m_graphicsBuffer); // The buffer to use
 
         // Call the super class to do all the work
-        return this->I2cSsd1681::init();
+        return this->I2cSsd1680::init();
     };
 
     void setXOffset(uint8_t xOffset){ m_xOffset = xOffset; }
@@ -84,10 +84,10 @@ public:
     void setDisplayHeight(uint8_t displayHeight){ m_displayHeight = displayHeight; }
 
 private:
-    uint8_t m_xOffset = kI2cSsd168xCustomDefaultXOffset;
-    uint8_t m_yOffset = kI2cSsd168xCustomDefaultYOffset;
-    uint8_t m_displayWidth = kI2cSsd168xCustomDefaultWidth;
-    uint8_t m_displayHeight = kI2cSsd168xCustomDefaultHeight;
+    uint8_t m_xOffset = kI2cSsd1681184x88DefaultXOffset;
+    uint8_t m_yOffset = kI2cSsd1681184x88DefaultYOffset;
+    uint8_t m_displayWidth = kI2cSsd1681184x88DefaultWidth;
+    uint8_t m_displayHeight = kI2cSsd1681184x88DefaultHeight;
 
     // Graphics buffer for this device.
     uint8_t *m_graphicsBuffer = nullptr;

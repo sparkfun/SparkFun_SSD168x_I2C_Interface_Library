@@ -1,4 +1,4 @@
-// i2c_ssd1681.cpp
+// i2c_ssd1680_rotated.cpp
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
@@ -28,10 +28,10 @@
 //    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 //    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "i2c_ssd1681.h"
+#include "i2c_ssd1680_rotated.h"
 
 /////////////////////////////////////////////////////////////////////////////
-// Class that implements graphics support for devices that use the SSD1681
+// Class that implements graphics support for devices that use the SSD1680
 //
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -50,11 +50,12 @@
 //
 // These macros work with the pageState_t struct type.
 //
-// Define unique values just outside of the screen buffer (SSD1681) page range
-// (0 base) Note: A page is 200 bytes in length
+// Define unique values just outside of the screen buffer (SSD1680) page range
+// (0 base) Note: A page should be 296 bytes in length, but parts of this library
+// are hard-wired to 8-bit coordinates... Here we use a limit of 200 bytes per page.
 
 #define kPageMin -1  // outside bounds - low value
-#define kPageMax 200 // outside bounds - high value
+#define kPageMax 200 // outside bounds - high value - ** Strictly this should be 296 (16-bit)! **
 
 // clean/ no settings in the page
 #define pageIsClean(_page_) (_page_.min == kPageMax)
@@ -151,7 +152,7 @@ static const rasterOPsFn m_rasterOps[] = {
 //
 // Just a bunch of member variable inits
 
-void I2cSsd1681::setupDefaults(void)
+void I2cSsd1680Rotated::setupDefaults(void)
 {
     default_address = {0};
     m_pBuffer = {nullptr};
@@ -166,7 +167,7 @@ void I2cSsd1681::setupDefaults(void)
 //
 // Called by user when the device/system is up and ready to be "initialized."
 //
-// This implementation performs the basic setup for the SSD1681 device
+// This implementation performs the basic setup for the SSD1680 device
 //
 // The startup sequence is as follows:
 //
@@ -178,7 +179,7 @@ void I2cSsd1681::setupDefaults(void)
 //
 // When this method is complete, the driver and device are ready for use
 //
-bool I2cSsd1681::init(void)
+bool I2cSsd1680Rotated::init(void)
 {
     if (m_isInitialized)
         return true;
@@ -202,7 +203,8 @@ bool I2cSsd1681::init(void)
     // Finish up setting up this object
 
     // Number of pages used for this device?
-    m_nPages = m_viewport.width / kByteNBits; // width / number of pixels per byte.
+    // Note: we are rotated. Height defines the pages, not width
+    m_nPages = m_viewport.height / kByteNBits; // width / number of pixels per byte.
 
     // init the graphics buffers
     initBuffers();
@@ -219,7 +221,7 @@ bool I2cSsd1681::init(void)
 //
 // Returns true on success, false on failure
 
-bool I2cSsd1681::reset(bool clearDisplay)
+bool I2cSsd1680Rotated::reset(bool clearDisplay)
 {
     // If we are not in an init state, just call init
     if (!m_isInitialized)
@@ -256,47 +258,52 @@ bool I2cSsd1681::reset(bool clearDisplay)
 // Method sends the init/setup commands to the OLED device, placing
 // it in a state for use by this driver/library.
 
-void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
+void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
 
-    for (int i = 0; i < numSsd1681InitCodeEntries; i++)
+    for (int i = 0; i < numSsd1680InitCodeEntries; i++)
     {
-        if (ssd1681InitCode[i].numFollowingBytes == 0)
-            sendDevCommand(ssd1681InitCode[i].command);
-        else if (ssd1681InitCode[i].numFollowingBytes == 1)
-            sendDevCommand(ssd1681InitCode[i].command, ssd1681InitCode[i].followingBytes[0]);
+        if (ssd1680InitCode[i].numFollowingBytes == 0)
+            sendDevCommand(ssd1680InitCode[i].command);
+        else if (ssd1680InitCode[i].numFollowingBytes == 1)
+            sendDevCommand(ssd1680InitCode[i].command, ssd1680InitCode[i].followingBytes[0]);
         else
-            sendDevCommand(ssd1681InitCode[i].command,
-                        (uint8_t *)&ssd1681InitCode[i].followingBytes[0],
-                        ssd1681InitCode[i].numFollowingBytes);
+            sendDevCommand(ssd1680InitCode[i].command,
+                        (uint8_t *)&ssd1680InitCode[i].followingBytes[0],
+                        ssd1680InitCode[i].numFollowingBytes);
 
-        if (ssd1681InitCode[i].delayAfter)
-            delay(ssd1681InitCode[i].delayDuration);
+        if (ssd1680InitCode[i].delayAfter)
+            delay(ssd1680InitCode[i].delayDuration);
     }
 
     uint8_t buffer[4];
+    // Note: we are rotated: X is height...
     buffer[0] = 0;
-    buffer[1] = (m_viewport.width / 8) - 1;
-    sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
+    buffer[1] = (m_viewport.height / 8) - 1;
+    sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-    buffer[0] = 0;
-    buffer[1] = 0;
-    buffer[2] = m_viewport.height - 1;
-    buffer[3] = (m_viewport.height - 1) >> 8;
-    sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
-
-    buffer[0] = m_viewport.height - 1;
-    buffer[1] = (m_viewport.height - 1) >> 8;
+    // Note: we are rotated: Y is width...
+    buffer[0] = m_viewport.width - 1;
+    buffer[1] = (m_viewport.width - 1) >> 8;
     buffer[2] = 0;
-    sendDevCommand( kCmdSsd1681DriverOutput, buffer, 3 );
+    buffer[3] = 0;
+    sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+
+    buffer[0] = m_viewport.width - 1;
+    buffer[1] = (m_viewport.width - 1) >> 8;
+    buffer[2] = 0;
+    sendDevCommand( kCmdSsd1680DriverOutput, buffer, 3 );
+
+    // **Update in Y direction**, Y decrement, X increment
+    sendDevCommand(kCmdSsd1680DataEntryMode, 0b00000101);
 
     if (clearDisplay)
     {
         // Use Auto-Write to set entire display white
         // Auto-Write BW A[7] : 1st step   A[6:4] : Height   A[2:0] : Width
-        sendDevCommand( kCmdSsd1681AutoWriteBW, 0b11110111);
+        sendDevCommand( kCmdSsd1680AutoWriteBW, 0b11100101);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -306,7 +313,7 @@ void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
 //
 // TODO -  In the *future*, generalize to match SDK
 
-void I2cSsd1681::setCommBus(QwI2C &theBus, uint8_t id_bus)
+void I2cSsd1680Rotated::setCommBus(QwI2C &theBus, uint8_t id_bus)
 {
     m_i2cBus = &theBus;
     m_i2cAddress = id_bus;
@@ -322,7 +329,7 @@ void I2cSsd1681::setCommBus(QwI2C &theBus, uint8_t id_bus)
 // on_initialize() method.
 //
 //
-void I2cSsd1681::setBuffer(uint8_t *pBuffer)
+void I2cSsd1680Rotated::setBuffer(uint8_t *pBuffer)
 {
     if (pBuffer)
         m_pBuffer = pBuffer;
@@ -333,20 +340,42 @@ void I2cSsd1681::setBuffer(uint8_t *pBuffer)
 //
 // Clear out all the on-device memory.
 //
-void I2cSsd1681::clearScreenBuffer(void)
+void I2cSsd1680Rotated::clearScreenBuffer(void)
 {
     // Clear out the screen buffer on the device
-    uint8_t emptyPage[kPageMax];
-    memset(emptyPage, COLOR_OFF, kPageMax); // OFF = 0. Becomes White due to inversion
+    const size_t kPageMaxReal = 296;
+    uint8_t emptyPage[kPageMaxReal / 2];
+    memset(emptyPage, COLOR_OFF, kPageMaxReal / 2); // OFF = 0. Becomes White due to inversion
 
-    for (int i = 0; i < kMaxPageNumberSSD1681; i++)
+    for (int i = 0; i < kMaxPageNumberSSD1680; i++)
     {
-        setScreenBufferAddress(i, 0);                // start of page
+        // We can't use setScreenBufferAddress here. We need to use real addresses
 
-        sendDevCommand(kCmdSsd1681WriteRamBW);
+        uint8_t buffer[4];
+        
+        buffer[0] = i;
+        buffer[1] = i;
+        sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        sendDevData((uint8_t *)emptyPage, kPageMax); // clear out page
+        buffer[0] = (kPageMaxReal - 1) & 0xFF;
+        buffer[1] = (kPageMaxReal - 1) >> 8;
+        buffer[2] = 0;
+        buffer[3] = 0;
+        sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
+        buffer[0] = i;
+        sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
+
+        // We are using Y decrement mode. Set Y to the max
+        buffer[0] = (kPageMaxReal - 1) & 0xFF;
+        buffer[1] = (kPageMaxReal - 1) >> 8;
+        sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
+
+        sendDevCommand(kCmdSsd1680WriteRamBW);
+
+        sendDevData((uint8_t *)emptyPage, kPageMaxReal / 2); // clear out page (limit to < 256)
+        delay(2);
+        sendDevData((uint8_t *)emptyPage, kPageMaxReal / 2); // clear out page (limit to < 256)
         delay(2);
     }
 }
@@ -356,13 +385,13 @@ void I2cSsd1681::clearScreenBuffer(void)
 // Will clear the local graphics buffer, and the devices screen buffer. Also
 // resets page state descriptors to a "clean" state.
 
-void I2cSsd1681::initBuffers(void)
+void I2cSsd1680Rotated::initBuffers(void)
 {
     int i;
 
     // clear out the local graphics buffer
     if (m_pBuffer)
-        memset(m_pBuffer, COLOR_OFF, m_viewport.height * m_nPages);
+        memset(m_pBuffer, COLOR_OFF, m_viewport.width * m_viewport.height / kByteNBits);
 
     // Set page descs to "clean" state
     for (i = 0; i < m_nPages; i++)
@@ -386,7 +415,7 @@ void I2cSsd1681::initBuffers(void)
 // Copy these to the page state, and call display
 //
 
-void I2cSsd1681::resendGraphics(void)
+void I2cSsd1680Rotated::resendGraphics(void)
 {
     // Set the page state dirty bounds to the bounds of erase state
     for (int i = 0; i < m_nPages; i++)
@@ -401,12 +430,12 @@ void I2cSsd1681::resendGraphics(void)
 // Used to set the power of the screen.
 // Careful now! Display needs a hardware reset to wake from deep sleep...
 
-void I2cSsd1681::displayPower(bool enable)
+void I2cSsd1680Rotated::displayPower(bool enable)
 {
     if (!m_isInitialized)
         return;
 
-    sendDevCommand(kCmdSsd1681DeepSleep, (enable ? 0x00 : 0x01)); // Normal Mode : Deep Sleep Mode 1
+    sendDevCommand(kCmdSsd1680DeepSleep, (enable ? 0x00 : 0x01)); // Normal Mode : Deep Sleep Mode 1
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -418,7 +447,7 @@ void I2cSsd1681::displayPower(bool enable)
 // haven't been sent to the screen.
 //
 
-void I2cSsd1681::erase(void)
+void I2cSsd1680Rotated::erase(void)
 {
     if (!m_pBuffer)
         return;
@@ -441,7 +470,9 @@ void I2cSsd1681::erase(void)
             continue;
 
         // clear out memory that is dirty on this page
-        memset(m_pBuffer + i * m_viewport.height + m_pageState[i].min, COLOR_OFF,
+        // Here, dirty min is left, dirty max is right. I.e. standard X coordinates
+        // When we write to the displayt, these become Y...
+        memset(m_pBuffer + i * m_viewport.width + m_pageState[i].min, COLOR_OFF,
                m_pageState[i].max - m_pageState[i].min + 1); // add one b/c values are 0 based
 
         // clear out any pending dirty range for this page - it's erased
@@ -461,76 +492,77 @@ void I2cSsd1681::erase(void)
 // function
 //
 
-void I2cSsd1681::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
+void I2cSsd1680Rotated::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
 {
     // quick sanity check on range
     if (x >= m_viewport.width || y >= m_viewport.height)
         return; // out of bounds
 
-    uint8_t bit = gfx_byte_bits[mod_byte(x)];
+    uint8_t bit = gfx_byte_bits[mod_byte(y)];
 
-    m_rasterOps[m_rop](m_pBuffer + y + x / kByteNBits * m_viewport.height, // pixel offset
+    m_rasterOps[m_rop](m_pBuffer + x + y / kByteNBits * m_viewport.width, // pixel offset
                        (clr == COLOR_ON ? bit : 0), bit);                  // which bit to set in byte
 
-    pageCheckBounds(m_pageState[x / kByteNBits],
-                    y); // update dirty range for page
-}
-////////////////////////////////////////////////////////////////////////////////////
-// draw_line_vert()
-//
-// Fast horizontal line drawing routine
-//
-
-void I2cSsd1681::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
-{
-    // Basically we set a bit within a range in a page of our graphics buffer.
-
-    // in range
-    if (x0 >= m_viewport.width)
-        return;
-
-    if (y0 > y1)
-        swap_int(y0, y1);
-
-    if (y1 >= m_viewport.height)
-        y1 = m_viewport.height - 1;
-
-    uint8_t bit = gfx_byte_bits[mod_byte(x0)];   // bit to set
-    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
-
-    // Get the start of this line in the graphics buffer
-    uint8_t *pBuffer = m_pBuffer + y0 + x0 / kByteNBits * m_viewport.height;
-
-    // walk up x and set the target pixel using the pixel operator function
-    for (int i = y0; i <= y1; i++, pBuffer++)
-        curROP(pBuffer, (clr == COLOR_ON ? bit : 0), bit);
-
-    // Mark the page dirty for the range drawn
-    pageCheckBoundsRange(m_pageState[x0 / kByteNBits], y0, y1);
+    pageCheckBounds(m_pageState[y / kByteNBits],
+                    x); // update dirty range for page
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_line_horz()
 //
-// Fast vertical line drawing routine - also supports fast filled rects
+// Fast horizontal line drawing routine
 //
-void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
+
+void I2cSsd1680Rotated::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
-    if (y0 >= m_viewport.height) // out of bounds
+    // Basically we set a bit within a range in a page of our graphics buffer.
+
+    // in range
+    if (y0 >= m_viewport.height)
         return;
 
-    // want an accending order
     if (x0 > x1)
         swap_int(x0, x1);
 
-    // keep on screen
     if (x1 >= m_viewport.width)
         x1 = m_viewport.width - 1;
+
+    uint8_t bit = gfx_byte_bits[mod_byte(y0)];   // bit to set
+    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
+
+    // Get the start of this line in the graphics buffer
+    uint8_t *pBuffer = m_pBuffer + x0 + y0 / kByteNBits * m_viewport.width;
+
+    // walk across and set the target pixel using the pixel operator function
+    for (int i = x0; i <= x1; i++, pBuffer++)
+        curROP(pBuffer, (clr == COLOR_ON ? bit : 0), bit);
+
+    // Mark the page dirty for the range drawn
+    pageCheckBoundsRange(m_pageState[y0 / kByteNBits], x0, x1);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// draw_line_vert()
+//
+// Fast vertical line drawing routine - also supports fast filled rects
+//
+void I2cSsd1680Rotated::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
+{
+    if (x0 >= m_viewport.width) // out of bounds
+        return;
+
+    // want an accending order
+    if (y0 > y1)
+        swap_int(y0, y1);
+
+    // keep on screen
+    if (y1 >= m_viewport.height)
+        y1 = m_viewport.height - 1;
 
     uint8_t startBit, endBit, setBits;
 
     // Get the start and end pages we are writing to
-    uint8_t page0 = x0 / kByteNBits;
-    uint8_t page1 = x1 / kByteNBits;
+    uint8_t page0 = y0 / kByteNBits;
+    uint8_t page1 = y1 / kByteNBits;
 
     // loop over the pages. For each page determine the range of pixels
     // to set in the target page byte and then set them using the current
@@ -538,27 +570,27 @@ void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 
     // Note: This function can also be used to draw filled rects - just iterate
     //       in the y direction. The base rect fill (in grBuffer) calls this
-    //       method y1-y0 times, and each of those calls has some overhead. So
-    //       just iterating over each page - y1-y0 times here - saves overhead
+    //       method x1-x0 times, and each of those calls has some overhead. So
+    //       just iterating over each page - x1-x0 times here - saves overhead
     //       costs.
     //
-    //       To make this work, make sure y0 > y1. Also, this method is wired in
+    //       To make this work, make sure x0 > x1. Also, this method is wired in
     //       as the draw_rect_filled entry in the draw interface. This is done
     //       above in the init process.
 
-    int yinc;
-    if (y0 > y1)
-        swap_int(y0, y1);
+    int xinc;
+    if (x0 > x1)
+        swap_int(x0, x1);
 
     rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
 
     for (int i = page0; i <= page1; i++)
     {
-        startBit = mod_byte(x0); // start bit in this byte
+        startBit = mod_byte(y0); // start bit in this byte
 
         // last bit of this byte to set? Does the line end in this byte, or continue
         // on...
-        endBit = x0 + kByteNBits - startBit > x1 ? mod_byte(x1) : kByteNBits - 1;
+        endBit = y0 + kByteNBits - startBit > y1 ? mod_byte(y1) : kByteNBits - 1;
 
         // Set the bits from startBit to endBit
         setBits = (0xFF << ((kByteNBits - endBit) - 1)) >> startBit; // what bits are being set in this byte
@@ -567,13 +599,13 @@ void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
         // function
 
         // Note - We iterate over y to fill in a rect if specified.
-        for (yinc = y0; yinc <= y1; yinc++)
-            curROP(m_pBuffer + i * m_viewport.height + yinc, (clr == COLOR_ON ? setBits : 0), setBits);
+        for (xinc = x0; xinc <= x1; xinc++)
+            curROP(m_pBuffer + i * m_viewport.width + xinc, (clr == COLOR_ON ? setBits : 0), setBits);
 
-        x0 += endBit - startBit + 1; // increment x0 to next page
+        y0 += endBit - startBit + 1; // increment x0 to next page
 
-        pageCheckBoundsRange(m_pageState[i], y0,
-                             y1); // mark dirty range in page desc
+        pageCheckBoundsRange(m_pageState[i], x0,
+                             x1); // mark dirty range in page desc
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -581,13 +613,13 @@ void I2cSsd1681::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 //
 // Does the actual drawing/logic
 
-void I2cSsd1681::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
+void I2cSsd1680Rotated::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
 {
     uint8_t x1 = x0 + width - 1;
     uint8_t y1 = y0 + height - 1;
 
-    // just call horz line
-    drawLineHorz(x0, y0, x1, y1, clr);
+    // just call vert line
+    drawLineVert(x0, y0, x1, y1, clr);
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_bitmap()
@@ -595,7 +627,7 @@ void I2cSsd1681::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t h
 // Draw a 8 bit encoded bitmap to the screen
 //
 
-void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t dst_height, uint8_t *pBitmap,
+void I2cSsd1680Rotated::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t dst_height, uint8_t *pBitmap,
                              uint8_t bmp_width, uint8_t bmp_height)
 {
     // some simple checks
@@ -618,11 +650,13 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
     // The Plan:
     //   - The BMP data is arranged in columns which made it easier when copying
     //     into OLED horizontal pages
-    //   - For the SSD1681, the pages are vertical, so this gets gnarly...
-    //     We can either read a column byte and set its bits in the appropriate
-    //     page rows
-    //     Or we can just scan each pixel in turn and set that pixel as needed...
-    //     Scanning is slow, but I don't think bytes to rows would be much faster?
+    //   - Here we are rotated, so we are also working with columns but the bit
+    //     order is reversed. In the BMP, the LSB is top-most. On SSD1680, MSB
+    //     is top-most... What to do? Do we use the optimized two-byte method
+    //     from the OLED library and remember to correct the bit orientation.
+    //     Or should we just scan each pixel in turn and set that pixel as needed...
+    //     For now, let's scan. Our future selves can add the two-byte method
+    //     if desired.
 
     for (uint16_t y = 0; y < dst_height; y++)
     {
@@ -658,30 +692,31 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
 // This class takes advantage of this to just write the "dirty" ranges in a
 // page.
 //
+// Remember we are rotated and using Y-decrement
 
-bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
+bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t column)
 {
-    if (page >= m_nPages || row >= m_viewport.height)
+    if (page >= m_nPages || column >= m_viewport.width)
         return false;
 
     uint8_t buffer[4];
     
     buffer[0] = page;
     buffer[1] = page;
-    sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
+    sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-    buffer[0] = row;
-    buffer[1] = row >> 8; // 0 (row is uint8_t)
-    buffer[2] = (m_viewport.height - 1);
-    buffer[3] = (m_viewport.height - 1) >> 8; // 0 (row is uint8_t)
-    sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
+    buffer[0] = (m_viewport.width - 1) - column;
+    buffer[1] = ((m_viewport.width - 1) - column) >> 8; // 0 (column is uint8_t)
+    buffer[2] = 0;
+    buffer[3] = 0; // 0 (row is uint8_t)
+    sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
-    sendDevCommand( kCmdSsd1681SetRamCounterX, buffer, 1 );
+    sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
 
-    buffer[0] = row;
-    buffer[1] = row >> 8; // 0 (row is uint8_t)
-    sendDevCommand( kCmdSsd1681SetRamCounterY, buffer, 2 );
+    buffer[0] = (m_viewport.width - 1) - column;
+    buffer[1] = ((m_viewport.width - 1) - column) >> 8; // 0 (column is uint8_t)
+    sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
     return true;
 }
@@ -694,7 +729,7 @@ bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
 // new graphics to display, and any currently displayed items that need to be
 // erased.
 
-void I2cSsd1681::display(bool partial)
+void I2cSsd1680Rotated::display(bool partial)
 {
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
@@ -720,10 +755,10 @@ void I2cSsd1681::display(bool partial)
         // buffer
         setScreenBufferAddress(i, transferRange.min);
 
-        sendDevCommand(kCmdSsd1681WriteRamBW);
+        sendDevCommand(kCmdSsd1680WriteRamBW);
 
         // send the dirty data to the device
-        sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+        sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(2); // Wait for I2C->SPI at 1MHz
@@ -741,9 +776,9 @@ void I2cSsd1681::display(bool partial)
     }
     m_pendingErase = false; // no longer pending
 
-    sendDevCommand( kCmdSsd1681DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
+    sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
 
-    sendDevCommand( kCmdSsd1681MasterActivate ); // Activate
+    sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -753,7 +788,7 @@ void I2cSsd1681::display(bool partial)
 //
 // send a single command to the device via the current bus object
 
-void I2cSsd1681::sendDevCommand(uint8_t command)
+void I2cSsd1680Rotated::sendDevCommand(uint8_t command)
 {
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
 }
@@ -764,7 +799,7 @@ void I2cSsd1681::sendDevCommand(uint8_t command)
 // send a single command and value to the device via the current bus object.
 //
 
-void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t value)
+void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t value)
 {
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendData, value);
@@ -775,7 +810,7 @@ void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t value)
 //
 // send a single command and multiple values to the device via the current bus object.
 
-void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values)
+void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values)
 {
     if (!values || n_values == 0)
         return;
@@ -789,7 +824,7 @@ void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_valu
 //
 // send multiple data bytes to the device via the current bus object
 
-void I2cSsd1681::sendDevData(uint8_t *pData, uint8_t nData)
+void I2cSsd1680Rotated::sendDevData(uint8_t *pData, uint8_t nData)
 {
     if (!pData || nData == 0)
         return;
