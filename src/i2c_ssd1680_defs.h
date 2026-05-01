@@ -91,7 +91,7 @@
 typedef struct {
   const uint8_t command;
   const uint8_t numFollowingBytes;
-  const uint8_t followingBytes[2];
+  const uint8_t followingBytes[3];
   const bool delayAfter;
   const unsigned long delayDuration;
 } ssd1680InitCodeEntry;
@@ -103,6 +103,10 @@ const ssd1680InitCodeEntry ssd1680InitCode[] = {
   { kCmdSsd1680SetRamCounterX, 1, { 0 }, false, 0 },
   { kCmdSsd1680SetRamCounterY, 2, { 0, 0 }, false, 0 },
   { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x48, 0x80 }, false, 0 }, // Bypass Red RAM, **Inverse** BW RAM content, S8-167
+  //{ kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0 }, // VCOM -0.2
+  //{ kCmdSsd1680WriteVcom, 1, { 0x36 }, false, 0 }, // VCOM -1.35
+  //{ kCmdSsd1680GateDrivingVoltage, 1, { 0x17 }, false, 0 }, // VGH 20
+  //{ kCmdSsd1680SourceDrivingVoltage, 3, { 0x41, 0xAC, 0x32 }, false, 0 }, // VSH1 15V, VSH2 5.4V, VSL -15V
 };
 
 const int numSsd1680InitCodeEntries = sizeof(ssd1680InitCode) / sizeof(ssd1680InitCodeEntry);

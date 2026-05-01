@@ -192,20 +192,23 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     }
 
     ///////////////////////////////////////////////////////////////////////
-    // displayPower()
+    // deepSleep()
     //
-    // Used to turn the SSD168x display on and off.
-    //
-    // Default value is on.
-    //
-    // Parameter    Description
-    // ---------    -----------------------------
-    // enable       Turn the display on or off - default is on
+    // Used to put the SSD168x into deep sleep.
 
-    void displayPower(bool enable = true)
+    void deepSleep(void)
     {
+        m_device.deepSleep();
+    }
 
-        m_device.displayPower(enable);
+    ///////////////////////////////////////////////////////////////////////
+    // isBusy()
+    //
+    // Read the SSD168x BUSY pin.
+
+    bool isBusy(void)
+    {
+        return m_device.isBusy();
     }
 
     ///////////////////////////////////////////////////////////////////////

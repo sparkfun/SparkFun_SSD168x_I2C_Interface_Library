@@ -45,6 +45,13 @@ void setup()
 
     // There's nothing on the screen yet - Now send the graphics to the device
     myDevice.display();
+
+    // Wait for display to update
+    while (myDevice.isBusy())
+        delay(10); // Don't pound the I2C bus too hard
+    
+    // Now put the display to sleep
+    myDevice.deepSleep();
 }
 
 void loop()

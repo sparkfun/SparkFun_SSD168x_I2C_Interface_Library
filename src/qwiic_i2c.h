@@ -52,10 +52,17 @@ public:
     // see if a device exists
     bool ping(uint8_t address);
 
+    // Select a register - used to perform a reset
+    bool writeRegister(uint8_t address, uint8_t offset);
+
+    // Write a single byte to the device
     bool writeRegisterByte(uint8_t address, uint8_t offset, uint8_t data);
 
-    // Write a block of bytes to the device --
+    // Write a block of bytes to the device
     int writeRegisterRegion(uint8_t address, uint8_t offset, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms = 0);
+
+    // Read a single byte from the device (from an unspecified 'register')
+    uint8_t readRegisterByte(uint8_t address);
 
 private:
     TwoWire* m_i2cPort;

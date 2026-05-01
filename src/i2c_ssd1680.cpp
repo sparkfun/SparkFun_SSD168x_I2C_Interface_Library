@@ -112,6 +112,7 @@
 //
 #define kDeviceSendCommand 0x00
 #define kDeviceSendData 0x01
+#define kDeviceSendReset 0x02
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Pixel write/set operations
@@ -197,26 +198,26 @@ bool I2cSsd1680::init(void)
     if (!this->QwGrBufferDevice::init())
         return false; // something isn't right
 
-    // setup the device
-    setupEpaperDevice();
-
-    // Finish up setting up this object
-
     // Number of pages used for this device?
     m_nPages = m_viewport.width / kByteNBits; // width / number of pixels per byte.
 
-    // init the graphics buffers
-    initBuffers();
+    // Flag that we are initialized
+    m_isInitialized = true;
 
-    m_isInitialized = true; // we're ready to rock
+    // setup e-paper device - before initBuffers. Needs m_isInitialized
+    setupEpaperDevice(true);
 
+    // Init internal/drawing buffers and device screen buffer
+    initBuffers(); // Note: calls clearScreenBuffer
+
+    // setup the device and init the graphics buffers
     return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 // reset()
 //
-// Return the OLED system to its initial state
+// Wake and reset the device
 //
 // Returns true on success, false on failure
 
@@ -226,11 +227,7 @@ bool I2cSsd1680::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
-    // is the device connected?
-    if (!m_i2cBus->ping(m_i2cAddress))
-        return false;
-
-    // setup oled
+    // setup e-paper device
     setupEpaperDevice(clearDisplay);
 
     // Init internal/drawing buffers and device screen buffer
@@ -261,6 +258,13 @@ void I2cSsd1680::setupEpaperDevice(bool clearDisplay)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
+
+    sendDevReset();
+
+    do {
+        delay(1);
+    }
+    while (isBusy());
 
     for (int i = 0; i < numSsd1680InitCodeEntries; i++)
     {
@@ -297,11 +301,7 @@ void I2cSsd1680::setupEpaperDevice(bool clearDisplay)
     sendDevCommand(kCmdSsd1680DataEntryMode, 0x07);
 
     if (clearDisplay)
-    {
-        // Use Auto-Write to set entire display white
-        // Auto-Write BW A[7] : 1st step   A[6:4] : Height   A[2:0] : Width
-        sendDevCommand( kCmdSsd1680AutoWriteBW, 0b11100101);
-    }
+        clearScreenBuffer();
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // setCommBus()
@@ -400,17 +400,30 @@ void I2cSsd1680::resendGraphics(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-// displayPower()
+// deepSleep()
 //
 // Used to set the power of the screen.
 // Careful now! Display needs a hardware reset to wake from deep sleep...
 
-void I2cSsd1680::displayPower(bool enable)
+void I2cSsd1680::deepSleep(void)
 {
     if (!m_isInitialized)
         return;
 
-    sendDevCommand(kCmdSsd1680DeepSleep, (enable ? 0x00 : 0x01)); // Normal Mode : Deep Sleep Mode 1
+    sendDevCommand(kCmdSsd1680DeepSleep, 0x01); // Deep Sleep Mode 1
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// isBusy()
+//
+// Used to read the state of the SSD168x BUSY pin (via I2C)
+
+bool I2cSsd1680::isBusy(void)
+{
+    if (!m_isInitialized)
+        return false;
+
+    return (readDevStatus() & 0x01);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -700,6 +713,11 @@ bool I2cSsd1680::setScreenBufferAddress(uint8_t page, uint8_t row)
 
 void I2cSsd1680::display(bool partial)
 {
+    if (partial)
+        sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // VCOM
+    else
+        sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1
+
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
 
@@ -799,4 +817,24 @@ void I2cSsd1680::sendDevData(uint8_t *pData, uint8_t nData)
         return;
 
     m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, pData, nData, 2);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// sendDeviceReset()
+//
+// reset the device
+
+void I2cSsd1680::sendDevReset(void)
+{
+    m_i2cBus->writeRegister(m_i2cAddress, kDeviceSendReset);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// readDevStatus()
+//
+// read a byte from the device via the current bus object
+
+uint8_t I2cSsd1680::readDevStatus(void)
+{
+    return m_i2cBus->readRegisterByte(m_i2cAddress);
 }

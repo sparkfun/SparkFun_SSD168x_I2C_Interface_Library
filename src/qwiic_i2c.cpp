@@ -97,6 +97,18 @@ bool QwI2C::ping(uint8_t i2c_address)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+// writeRegister()
+//
+// Select a register
+
+bool QwI2C::writeRegister(uint8_t i2c_address, uint8_t offset)
+{
+    m_i2cPort->beginTransmission(i2c_address);
+    m_i2cPort->write(offset);
+    return m_i2cPort->endTransmission() == 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // writeRegisterByte()
 //
 // Write a byte to a register
@@ -108,6 +120,7 @@ bool QwI2C::writeRegisterByte(uint8_t i2c_address, uint8_t offset, uint8_t dataT
     m_i2cPort->write(dataToWrite);
     return m_i2cPort->endTransmission() == 0;
 }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // writeRegisterRegion()
 //
@@ -144,4 +157,18 @@ int QwI2C::writeRegisterRegion(uint8_t i2c_address, uint8_t offset, uint8_t* dat
     }
 
     return length - nRemaining;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// readRegisterByte()
+//
+// Read a byte from a virtual register
+
+uint8_t QwI2C::readRegisterByte(uint8_t i2c_address)
+{
+    if (m_i2cPort->requestFrom(i2c_address, 1))
+        if (m_i2cPort->available())
+            return (uint8_t)m_i2cPort->read();
+
+    return 0;
 }

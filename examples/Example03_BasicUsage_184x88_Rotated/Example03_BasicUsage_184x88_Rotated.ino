@@ -18,7 +18,7 @@ void setup()
 
     Wire.begin();
 
-    // Initalize the device and related graphics system
+    // Wake and initalize the device and related graphics system
     if (myDevice.begin() == false)
     {
         Serial.println("Device begin failed. Freezing...");
@@ -43,7 +43,22 @@ void setup()
     myDevice.text(76, 20, "01234567");
 
     // There's nothing on the screen yet - Now send the graphics to the device
+    unsigned long startTime = millis();
+
     myDevice.display();
+
+    Serial.printf("myDevice.display() took %ldms\r\n", millis() - startTime);
+
+    // Wait for the display to update
+    startTime = millis();
+
+    while (myDevice.isBusy())
+        delay(10); // Don't pound the I2C bus too hard
+    
+    Serial.printf("myDevice was busy for %ldms\r\n", millis() - startTime);
+
+    // Now put the display to sleep
+    myDevice.deepSleep();
 }
 
 void loop()

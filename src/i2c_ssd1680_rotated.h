@@ -158,7 +158,9 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
         return m_rop;
     }
 
-    void displayPower(bool enable = true); // false = deep sleep. Only a hardware reset can wake it again
+    void deepSleep(void); // Only a hardware reset can wake it again
+
+    bool isBusy(void); // Return the state of the BUSY pin
 
   protected:
     // Subclasses of this class define the specifics of the device, including size.
@@ -199,6 +201,8 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     void sendDevCommand(uint8_t command, uint8_t value);
     void sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values);
     void sendDevData(uint8_t *pData, uint8_t nData);
+    void sendDevReset(void);
+    uint8_t readDevStatus(void);
 
     /////////////////////////////////////////////////////////////////////////////
     // instance vars

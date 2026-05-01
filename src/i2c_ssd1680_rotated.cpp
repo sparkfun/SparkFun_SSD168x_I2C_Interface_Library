@@ -112,6 +112,7 @@
 //
 #define kDeviceSendCommand 0x00
 #define kDeviceSendData 0x01
+#define kDeviceSendReset 0x02
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Pixel write/set operations
@@ -197,27 +198,27 @@ bool I2cSsd1680Rotated::init(void)
     if (!this->QwGrBufferDevice::init())
         return false; // something isn't right
 
-    // setup the device
-    setupEpaperDevice();
-
-    // Finish up setting up this object
-
     // Number of pages used for this device?
     // Note: we are rotated. Height defines the pages, not width
     m_nPages = m_viewport.height / kByteNBits; // width / number of pixels per byte.
 
-    // init the graphics buffers
-    initBuffers();
+    // Flag that we are initialized
+    m_isInitialized = true;
 
-    m_isInitialized = true; // we're ready to rock
+    // setup e-paper device - before initBuffers. Needs m_isInitialized
+    setupEpaperDevice(true);
 
+    // Init internal/drawing buffers and device screen buffer
+    initBuffers(); // Note: calls clearScreenBuffer
+
+    // setup the device and init the graphics buffers
     return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 // reset()
 //
-// Return the OLED system to its initial state
+// Wake and reset the device
 //
 // Returns true on success, false on failure
 
@@ -227,11 +228,7 @@ bool I2cSsd1680Rotated::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
-    // is the device connected?
-    if (!m_i2cBus->ping(m_i2cAddress))
-        return false;
-
-    // setup oled
+    // setup e-paper device
     setupEpaperDevice(clearDisplay);
 
     // Init internal/drawing buffers and device screen buffer
@@ -262,6 +259,13 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
+
+    sendDevReset();
+
+    do {
+        delay(1);
+    }
+    while (isBusy());
 
     for (int i = 0; i < numSsd1680InitCodeEntries; i++)
     {
@@ -300,11 +304,7 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
     sendDevCommand(kCmdSsd1680DataEntryMode, 0b00000101);
 
     if (clearDisplay)
-    {
-        // Use Auto-Write to set entire display white
-        // Auto-Write BW A[7] : 1st step   A[6:4] : Height   A[2:0] : Width
-        sendDevCommand( kCmdSsd1680AutoWriteBW, 0b11100101);
-    }
+        clearScreenBuffer();
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // setCommBus()
@@ -342,10 +342,9 @@ void I2cSsd1680Rotated::setBuffer(uint8_t *pBuffer)
 //
 void I2cSsd1680Rotated::clearScreenBuffer(void)
 {
-    // Clear out the screen buffer on the device
-    const size_t kPageMaxReal = 296;
-    uint8_t emptyPage[kPageMaxReal / 2];
-    memset(emptyPage, COLOR_OFF, kPageMaxReal / 2); // OFF = 0. Becomes White due to inversion
+    // Clear out the **visible** screen buffer on the device
+    uint8_t emptyPage[m_viewport.width];
+    memset(emptyPage, COLOR_OFF, m_viewport.width); // OFF = 0. Becomes White due to inversion
 
     for (int i = 0; i < kMaxPageNumberSSD1680; i++)
     {
@@ -357,8 +356,8 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         buffer[1] = i;
         sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        buffer[0] = (kPageMaxReal - 1) & 0xFF;
-        buffer[1] = (kPageMaxReal - 1) >> 8;
+        buffer[0] = (m_viewport.width) & 0xFF;
+        buffer[1] = (m_viewport.width) >> 8;
         buffer[2] = 0;
         buffer[3] = 0;
         sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
@@ -367,15 +366,13 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
 
         // We are using Y decrement mode. Set Y to the max
-        buffer[0] = (kPageMaxReal - 1) & 0xFF;
-        buffer[1] = (kPageMaxReal - 1) >> 8;
+        buffer[0] = (m_viewport.width) & 0xFF;
+        buffer[1] = (m_viewport.width) >> 8;
         sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
         sendDevCommand(kCmdSsd1680WriteRamBW);
 
-        sendDevData((uint8_t *)emptyPage, kPageMaxReal / 2); // clear out page (limit to < 256)
-        delay(2);
-        sendDevData((uint8_t *)emptyPage, kPageMaxReal / 2); // clear out page (limit to < 256)
+        sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
         delay(2);
     }
 }
@@ -425,17 +422,30 @@ void I2cSsd1680Rotated::resendGraphics(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-// displayPower()
+// deepSleep()
 //
 // Used to set the power of the screen.
 // Careful now! Display needs a hardware reset to wake from deep sleep...
 
-void I2cSsd1680Rotated::displayPower(bool enable)
+void I2cSsd1680Rotated::deepSleep(void)
 {
     if (!m_isInitialized)
         return;
 
-    sendDevCommand(kCmdSsd1680DeepSleep, (enable ? 0x00 : 0x01)); // Normal Mode : Deep Sleep Mode 1
+    sendDevCommand(kCmdSsd1680DeepSleep, 0x01); // Deep Sleep Mode 1
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// isBusy()
+//
+// Used to read the state of the SSD168x BUSY pin (via I2C)
+
+bool I2cSsd1680Rotated::isBusy(void)
+{
+    if (!m_isInitialized)
+        return false;
+
+    return (readDevStatus() & 0x01);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -751,6 +761,19 @@ void I2cSsd1680Rotated::display(bool partial)
                                         // page were null
             continue;                   // next
 
+        if (partial)
+        {
+            sendDevReset();
+            do {
+                delay(1);
+            } while(isBusy());
+        }
+
+        if (partial)
+            sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // VCOM
+        else
+            sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1
+
         // set the start address to write the updated data to the devices screen
         // buffer
         setScreenBufferAddress(i, transferRange.min);
@@ -774,6 +797,7 @@ void I2cSsd1680Rotated::display(bool partial)
         // this page is no longer dirty - mark it  clean
         pageSetClean(m_pageState[i]);
     }
+
     m_pendingErase = false; // no longer pending
 
     sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
@@ -830,4 +854,24 @@ void I2cSsd1680Rotated::sendDevData(uint8_t *pData, uint8_t nData)
         return;
 
     m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, pData, nData, 2);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// sendDeviceReset()
+//
+// reset the device
+
+void I2cSsd1680Rotated::sendDevReset(void)
+{
+    m_i2cBus->writeRegister(m_i2cAddress, kDeviceSendReset);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// readDevStatus()
+//
+// read a byte from the device via the current bus object
+
+uint8_t I2cSsd1680Rotated::readDevStatus(void)
+{
+    return m_i2cBus->readRegisterByte(m_i2cAddress);
 }
