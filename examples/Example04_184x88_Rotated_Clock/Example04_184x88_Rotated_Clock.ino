@@ -25,10 +25,10 @@ void setup()
     Serial.println("Begin success");
 
     // Fill a rectangle on the screen that has a 4 pixel border
-    myDevice.rectangleFill(4, 4, myDevice.getWidth() - 8, myDevice.getHeight() - 8);
+    //myDevice.rectangleFill(4, 4, myDevice.getWidth() - 8, myDevice.getHeight() - 8);
 
     // Fill a rectangle within that, to leave an 4 pixel frame
-    myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, COLOR_OFF);
+    //myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, COLOR_OFF);
 
     // There's nothing on the screen yet - Now send the graphics to the device
     myDevice.display();
@@ -89,16 +89,17 @@ void loop()
             }
         }
 
-        // if only 1 character has changed, do a partial update
-        if (numCharsChanged <= 1)
-            myDevice.display(true);
-        // otherside do a full update
-        else
-            myDevice.display();
+        // if only 1 or 2 characters have changed, do a partial update, otherside do a full update
+        bool doPartial = numCharsChanged <= 2;
+
+        myDevice.display(doPartial);
 
         // Wait for display to update
-        while (myDevice.isBusy())
+        do {
             delay(10); // Don't pound the I2C bus too hard
+        } while (myDevice.isBusy());
+
+        myDevice.deepSleep();
 
         // update previousTime
         strcpy(previousTime, theTime);

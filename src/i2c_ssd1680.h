@@ -155,7 +155,7 @@ class I2cSsd1680 : public QwGrBufferDevice
         return m_rop;
     }
 
-    void deepSleep(void); // Only a hardware reset can wake it again
+    void deepSleep(bool mode2); // Only a hardware reset can wake it again
 
     bool isBusy(void); // Return the state of the BUSY pin
 

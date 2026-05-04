@@ -158,7 +158,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
         return m_rop;
     }
 
-    void deepSleep(void); // Only a hardware reset can wake it again
+    void deepSleep(bool mode2); // Only a hardware reset can wake it again
 
     bool isBusy(void); // Return the state of the BUSY pin
 
@@ -190,7 +190,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
 
   private:
     // Internal buffer management methods
-    bool setScreenBufferAddress(uint8_t page, uint8_t column);
+    bool setScreenBufferAddress(uint8_t page, uint8_t columnStart, uint8_t columnEnd);
     void initBuffers(void); // clear graphics and screen buffer
     void clearScreenBuffer(void);
     void resendGraphics(void);

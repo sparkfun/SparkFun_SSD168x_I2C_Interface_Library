@@ -94,19 +94,25 @@ typedef struct {
   const uint8_t followingBytes[3];
   const bool delayAfter;
   const unsigned long delayDuration;
+  const bool busyAfter;
 } ssd1680InitCodeEntry;
 
 const ssd1680InitCodeEntry ssd1680InitCode[] = {
-  { kCmdSsd1680SwReset, 0, { 0 }, true, 20 },
-  { kCmdSsd1680WriteBorder, 1, { 0x05 }, false, 0 }, // Follow LUT1
-  { kCmdSsd1680TempSensorControl, 1, { 0x80 }, false, 0 }, // Internal temperature sensor
-  { kCmdSsd1680SetRamCounterX, 1, { 0 }, false, 0 },
-  { kCmdSsd1680SetRamCounterY, 2, { 0, 0 }, false, 0 },
-  { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x48, 0x80 }, false, 0 }, // Bypass Red RAM, **Inverse** BW RAM content, S8-167
-  //{ kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0 }, // VCOM -0.2
-  //{ kCmdSsd1680WriteVcom, 1, { 0x36 }, false, 0 }, // VCOM -1.35
-  //{ kCmdSsd1680GateDrivingVoltage, 1, { 0x17 }, false, 0 }, // VGH 20
-  //{ kCmdSsd1680SourceDrivingVoltage, 3, { 0x41, 0xAC, 0x32 }, false, 0 }, // VSH1 15V, VSH2 5.4V, VSL -15V
+  { kCmdSsd1680SwReset, 0, { 0 }, true, 20, true },
+  { kCmdSsd1680TempSensorControl, 1, { 0x80 }, false, 0, false }, // Internal temperature sensor
+  //{ kCmdSsd1680DisplayUpdateCtrl2, 1, { 0xB1 }, false, 0, false }, // Load temperature value
+  //{ kCmdSsd1680MasterActivate, 0, { 0 }, true, 10, true }, // Display update sequence
+  //{ kCmdSsd1680TempSensorWrite, 2, { 0x5A, 0 }, false, 0, false }, // 4-Gray
+  //{ kCmdSsd1680DisplayUpdateCtrl2, 1, { 0x91 }, false, 0, false }, // Load temperature value
+  //{ kCmdSsd1680MasterActivate, 0, { 0 }, true, 10, true }, // Display update sequence
+  { kCmdSsd1680WriteBorder, 1, { 0x00 }, false, 0, false }, // Follow LUT0 (Black)
+  { kCmdSsd1680SetRamCounterX, 1, { 0 }, false, 0, false },
+  { kCmdSsd1680SetRamCounterY, 2, { 0, 0 }, false, 0, false },
+  { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x00, 0x80 }, false, 0, false }, // Normal Red RAM, Normal BW RAM content, S8-167
+  { kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0, false }, // VCOM -0.2
+  //{ kCmdSsd1680WriteVcom, 1, { 0x36 }, false, 0, false }, // VCOM -1.35
+  //{ kCmdSsd1680GateDrivingVoltage, 1, { 0x17 }, false, 0, false }, // VGH 20
+  //{ kCmdSsd1680SourceDrivingVoltage, 3, { 0x41, 0xAC, 0x32 }, false, 0, false }, // VSH1 15V, VSH2 5.4V, VSL -15V
 };
 
 const int numSsd1680InitCodeEntries = sizeof(ssd1680InitCode) / sizeof(ssd1680InitCodeEntry);

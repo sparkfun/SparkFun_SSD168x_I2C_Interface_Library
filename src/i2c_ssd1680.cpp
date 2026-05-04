@@ -405,12 +405,12 @@ void I2cSsd1680::resendGraphics(void)
 // Used to set the power of the screen.
 // Careful now! Display needs a hardware reset to wake from deep sleep...
 
-void I2cSsd1680::deepSleep(void)
+void I2cSsd1680::deepSleep(bool mode2)
 {
     if (!m_isInitialized)
         return;
 
-    sendDevCommand(kCmdSsd1680DeepSleep, 0x01); // Deep Sleep Mode 1
+    sendDevCommand(kCmdSsd1680DeepSleep, mode2 ? 0x03 : 0x01); // Deep Sleep Mode 2/1
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

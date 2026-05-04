@@ -280,6 +280,13 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
 
         if (ssd1680InitCode[i].delayAfter)
             delay(ssd1680InitCode[i].delayDuration);
+
+        if (ssd1680InitCode[i].busyAfter)
+        {
+            do {
+                delay(10);
+            } while (isBusy());
+        }
     }
 
     uint8_t buffer[4];
@@ -356,8 +363,8 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         buffer[1] = i;
         sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        buffer[0] = (m_viewport.width) & 0xFF;
-        buffer[1] = (m_viewport.width) >> 8;
+        buffer[0] = (m_viewport.width - 1) & 0xFF;
+        buffer[1] = (m_viewport.width - 1) >> 8;
         buffer[2] = 0;
         buffer[3] = 0;
         sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
@@ -366,11 +373,36 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
 
         // We are using Y decrement mode. Set Y to the max
-        buffer[0] = (m_viewport.width) & 0xFF;
-        buffer[1] = (m_viewport.width) >> 8;
+        buffer[0] = (m_viewport.width - 1) & 0xFF;
+        buffer[1] = (m_viewport.width - 1) >> 8;
         sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
         sendDevCommand(kCmdSsd1680WriteRamBW);
+
+        sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
+        delay(2);
+
+        // Repeat for Red RAM (4-Gray)
+
+        buffer[0] = i;
+        buffer[1] = i;
+        sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+
+        buffer[0] = (m_viewport.width - 1) & 0xFF;
+        buffer[1] = (m_viewport.width - 1) >> 8;
+        buffer[2] = 0;
+        buffer[3] = 0;
+        sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+
+        buffer[0] = i;
+        sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
+
+        // We are using Y decrement mode. Set Y to the max
+        buffer[0] = (m_viewport.width - 1) & 0xFF;
+        buffer[1] = (m_viewport.width - 1) >> 8;
+        sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
+
+        sendDevCommand(kCmdSsd1680WriteRamRed);
 
         sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
         delay(2);
@@ -427,12 +459,12 @@ void I2cSsd1680Rotated::resendGraphics(void)
 // Used to set the power of the screen.
 // Careful now! Display needs a hardware reset to wake from deep sleep...
 
-void I2cSsd1680Rotated::deepSleep(void)
+void I2cSsd1680Rotated::deepSleep(bool mode2)
 {
     if (!m_isInitialized)
         return;
 
-    sendDevCommand(kCmdSsd1680DeepSleep, 0x01); // Deep Sleep Mode 1
+    sendDevCommand(kCmdSsd1680DeepSleep, mode2 ? 0x03 : 0x01); // Deep Sleep Mode 2/1
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -694,7 +726,7 @@ void I2cSsd1680Rotated::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, ui
 // Sets the target screen buffer address for graphics buffer transfer to the
 // device.
 //
-// The positon is specified by page and row
+// The positon is specified by page and column
 //
 // The system runs in "page mode" - data is streamed along a page, based
 // on the set starting position.
@@ -704,9 +736,9 @@ void I2cSsd1680Rotated::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, ui
 //
 // Remember we are rotated and using Y-decrement
 
-bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t column)
+bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t columnStart, uint8_t columnEnd)
 {
-    if (page >= m_nPages || column >= m_viewport.width)
+    if (page >= m_nPages || columnStart >= m_viewport.width || columnEnd >= m_viewport.width)
         return false;
 
     uint8_t buffer[4];
@@ -715,17 +747,17 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t column)
     buffer[1] = page;
     sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-    buffer[0] = (m_viewport.width - 1) - column;
-    buffer[1] = ((m_viewport.width - 1) - column) >> 8; // 0 (column is uint8_t)
-    buffer[2] = 0;
-    buffer[3] = 0; // 0 (row is uint8_t)
+    buffer[0] = (m_viewport.width - 1) - columnStart;
+    buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
+    buffer[2] = (m_viewport.width - 1) - columnEnd;
+    buffer[3] = ((m_viewport.width - 1) - columnEnd) >> 8; // 0 (column is uint8_t)
     sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
     sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
 
-    buffer[0] = (m_viewport.width - 1) - column;
-    buffer[1] = ((m_viewport.width - 1) - column) >> 8; // 0 (column is uint8_t)
+    buffer[0] = (m_viewport.width - 1) - columnStart;
+    buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
     sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
     return true;
@@ -741,6 +773,8 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t column)
 
 void I2cSsd1680Rotated::display(bool partial)
 {
+    bool displayReset = false;
+
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
 
@@ -761,22 +795,28 @@ void I2cSsd1680Rotated::display(bool partial)
                                         // page were null
             continue;                   // next
 
-        if (partial)
+        if (partial || !displayReset)
         {
             sendDevReset();
+
+            delay(10);
+
             do {
                 delay(1);
             } while(isBusy());
-        }
 
-        if (partial)
-            sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // VCOM
-        else
-            sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1
+            if (partial)
+                sendDevCommand( kCmdSsd1680WriteBorder, 0xC0 ); // HiZ
+                //sendDevCommand( kCmdSsd1680WriteBorder, 0x04 ); // Follow LUT1 (White)
+            else
+                sendDevCommand( kCmdSsd1680WriteBorder, 0x00 ); // Follow LUT0 (Black)
+
+            displayReset = true;
+        }
 
         // set the start address to write the updated data to the devices screen
         // buffer
-        setScreenBufferAddress(i, transferRange.min);
+        setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
         sendDevCommand(kCmdSsd1680WriteRamBW);
 
@@ -785,6 +825,24 @@ void I2cSsd1680Rotated::display(bool partial)
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(2); // Wait for I2C->SPI at 1MHz
+
+        // If this is a non-partial update, write the same data to the Red RAM so the SSD1680 can
+        // diff it on the next partial write
+
+        // if (!partial)
+        // {
+        //     // set the start address to write the updated data to the devices screen
+        //     // buffer
+        //     setScreenBufferAddress(i, transferRange.min, transferRange.max);
+
+        //     sendDevCommand(kCmdSsd1680WriteRamRed);
+
+        //     // send the dirty data to the device
+        //     sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
+        //                 transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
+
+        //     delay(2); // Wait for I2C->SPI at 1MHz
+        // }
 
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear
@@ -800,9 +858,11 @@ void I2cSsd1680Rotated::display(bool partial)
 
     m_pendingErase = false; // no longer pending
 
-    sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
-
-    sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
+    if (displayReset) // If some dirty pixels were sent, activate the display
+    {
+        sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
+        sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

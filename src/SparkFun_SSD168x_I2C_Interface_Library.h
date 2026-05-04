@@ -196,9 +196,9 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     // Used to put the SSD168x into deep sleep.
 
-    void deepSleep(void)
+    void deepSleep(bool mode2 = false)
     {
-        m_device.deepSleep();
+        m_device.deepSleep(mode2);
     }
 
     ///////////////////////////////////////////////////////////////////////
