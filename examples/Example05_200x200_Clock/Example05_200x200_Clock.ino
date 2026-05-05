@@ -5,6 +5,17 @@ SSD1681I2C200x200 myDevice;
 // Fonts
 #include <res/qw_fnt_largenum.h>
 
+// Static char array to hold the previous time
+// Load the previous time with zeros for the background / basemap for partial updates
+static char previousTime[strlen("HHHH:MM:SS") + 1] = { '0', '0', '0', '0', ':', '0', '0', ':', '0', '0', '\0' };
+
+// Define the start coordinates for displaying the time
+const int xStart = 40;
+const int yStart = 76;
+
+// Change this to invert the colors
+const bool invertColors = true;
+
 void setup()
 {
     delay(1000);
@@ -24,27 +35,32 @@ void setup()
     }
     Serial.println("Begin success");
 
+    // Fill the whole screen
+    myDevice.rectangleFill(0, 0, myDevice.getWidth(), myDevice.getHeight(), invertColors ? COLOR_ON : COLOR_OFF);
+
     // Fill a rectangle on the screen that has a 4 pixel border
-    myDevice.rectangleFill(4, 4, myDevice.getWidth() - 8, myDevice.getHeight() - 8);
+    myDevice.rectangleFill(4, 4, myDevice.getWidth() - 8, myDevice.getHeight() - 8, invertColors ? COLOR_OFF : COLOR_ON);
 
     // Fill a rectangle within that, to leave an 4 pixel frame
-    myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, COLOR_OFF);
+    myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, invertColors ? COLOR_ON : COLOR_OFF);
 
-    // There's nothing on the screen yet - Now send the graphics to the device
-    myDevice.display();
+    // Add the 0000:00:00 held in previousTime - this becomes the background for partial updates
+    myDevice.setFont(QW_FONT_LARGENUM);
+    myDevice.text(xStart, yStart, previousTime, invertColors ? COLOR_OFF : COLOR_ON);
+
+    // There's nothing on the screen yet
+    // Send the graphics to the device and also set the background for partial updates
+    myDevice.displayBackground();
 
     // Wait for display to update
     while (myDevice.isBusy())
-        delay(10); // Don't pound the I2C bus too hard
-    
-    myDevice.setFont(QW_FONT_LARGENUM);
+        delay(10); // Don't pound the I2C bus too hard    
 }
 
 void loop()
 {
-    // char arrays to hold the time and previous time
+    // char array to hold the time
     char theTime[strlen("HHHH:MM:SS") + 1];
-    static char previousTime[strlen("HHHH:MM:SS") + 1] = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
 
     // split millis into hours, mins and secs
     int hh,mm,ss;
@@ -74,39 +90,40 @@ void loop()
     // if any characters have changed
     if (numCharsChanged > 0)
     {
-        // wake (reset) the display
-        myDevice.reset(false);
+        Serial.println(theTime);
 
         // for each character that has changed, erase it and update it
         for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
         {
-            const int xStart = 40;
-            const int yStart = 76;
             if (charsChanged[i])
             {
                 myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
-                                FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, COLOR_OFF);
+                                FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
                 char newChar[2];
                 sprintf(newChar, "%c", theTime[i]);
-                myDevice.text(xStart + i * FONT_LARGENUM_WIDTH, yStart, newChar);
+                myDevice.text(xStart + i * FONT_LARGENUM_WIDTH, yStart, newChar, invertColors ? COLOR_OFF : COLOR_ON);
             }
         }
 
-        // if only 1 character has changed, do a partial update
-        if (numCharsChanged <= 1)
-            myDevice.display(true);
-        // otherside do a full update
+        // if only 1 character has changed, do a partial update,
+        // otherside do a full update and update the background
+
+        bool doPartial = numCharsChanged <= 1;
+
+        //myDevice.display(doPartial, !doPartial);
+        if (doPartial)
+            myDevice.displayPartial();
         else
-            myDevice.display();
+            myDevice.displayBackground();
 
         // Wait for display to update
-        while (myDevice.isBusy())
+        do {
             delay(10); // Don't pound the I2C bus too hard
+        } while (myDevice.isBusy());
 
-        // Now put the display to sleep
         myDevice.deepSleep();
-    }
 
-    // update previousTime
-    strcpy(previousTime, theTime);
+        // update previousTime
+        strcpy(previousTime, theTime);
+    }
 }

@@ -174,9 +174,17 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     // To display any graphics, this method must be called.
 
-    void display(bool partial = false)
+    void displayPartial(void)
     {
-        m_device.display(partial);
+        m_device.display(true, false);
+    }
+    void displayBackground(void)
+    {
+        m_device.display(false, true);
+    }
+    void display(bool partial = false, bool background = false)
+    {
+        m_device.display(partial, background);
     }
 
     ///////////////////////////////////////////////////////////////////////

@@ -137,9 +137,9 @@ static const rasterOPsFn m_rasterOps[] = {
     // COPY
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | (src & mask); },
     // NOT COPY
-    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((!src) & mask); },
+    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((~src) & mask); },
     // NOT DEST
-    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((!(*dst)) & mask); },
+    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((~(*dst)) & mask); },
     // XOR
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((*dst ^ src) & mask); },
     // Always Off
@@ -206,7 +206,7 @@ bool I2cSsd1680Rotated::init(void)
     m_isInitialized = true;
 
     // setup e-paper device - before initBuffers. Needs m_isInitialized
-    setupEpaperDevice(true);
+    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
 
     // Init internal/drawing buffers and device screen buffer
     initBuffers(); // Note: calls clearScreenBuffer
@@ -228,12 +228,19 @@ bool I2cSsd1680Rotated::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
-    // setup e-paper device
-    setupEpaperDevice(clearDisplay);
-
-    // Init internal/drawing buffers and device screen buffer
     if (clearDisplay)
-        initBuffers();
+    {
+        // setup e-paper device
+        setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+
+        // Init internal/drawing buffers and device screen buffer
+        initBuffers(); // Note: calls clearScreenBuffer
+    }
+    else
+    {
+        // setup e-paper device and clear the device screen buffer
+        setupEpaperDevice(true);
+    }
 
     return true;
 }
@@ -255,7 +262,7 @@ bool I2cSsd1680Rotated::reset(bool clearDisplay)
 // Method sends the init/setup commands to the OLED device, placing
 // it in a state for use by this driver/library.
 
-void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
+void I2cSsd1680Rotated::setupEpaperDevice(bool clearBuffer)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
@@ -263,7 +270,7 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
     sendDevReset();
 
     do {
-        delay(1);
+        delay(10);
     }
     while (isBusy());
 
@@ -281,7 +288,7 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
         if (ssd1680InitCode[i].delayAfter)
             delay(ssd1680InitCode[i].delayDuration);
 
-        if (ssd1680InitCode[i].busyAfter)
+        if (ssd1680InitCode[i].checkBusyAfter)
         {
             do {
                 delay(10);
@@ -310,7 +317,7 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearDisplay)
     // **Update in Y direction**, Y decrement, X increment
     sendDevCommand(kCmdSsd1680DataEntryMode, 0b00000101);
 
-    if (clearDisplay)
+    if (clearBuffer)
         clearScreenBuffer();
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -353,7 +360,7 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
     uint8_t emptyPage[m_viewport.width];
     memset(emptyPage, COLOR_OFF, m_viewport.width); // OFF = 0. Becomes White due to inversion
 
-    for (int i = 0; i < kMaxPageNumberSSD1680; i++)
+    for (int i = 0; i < m_nPages; i++)
     {
         // We can't use setScreenBufferAddress here. We need to use real addresses
 
@@ -382,7 +389,7 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
         delay(2);
 
-        // Repeat for Red RAM (4-Gray)
+        // Repeat for Red RAM - used as the background / base map for partial updates
 
         buffer[0] = i;
         buffer[1] = i;
@@ -770,9 +777,23 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t columnStart
 // Only send the areas that need to be updated. The update region is based on
 // new graphics to display, and any currently displayed items that need to be
 // erased.
+// If partial is true, perform a partial update. The SSD168x will use the Red RAM
+// as the background / base map for the partial update.
+// If background is true, write to both BW and Red RAM and then do a full update.
+// The Red RAM is the background / base map for partial updates.
 
-void I2cSsd1680Rotated::display(bool partial)
+void I2cSsd1680Rotated::display(bool partial, bool background)
 {
+    // If background is true, ensure partial is false
+    if (background)
+        partial = false;
+
+    // Decisions, decisions... If background is true, should we send *everything*,
+    // i.e. the whole buffer, or still rely on the "dirty" areas?
+    // Sending the whole buffer is safest, but slow.
+    // Sending only the dirty areas is probably OK because init calls clearScreenBuffer
+    // which clears both BW and Red RAM.
+
     bool displayReset = false;
 
     // Loop over our page descriptors - if a page is dirty, send the graphics
@@ -807,9 +828,8 @@ void I2cSsd1680Rotated::display(bool partial)
 
             if (partial)
                 sendDevCommand( kCmdSsd1680WriteBorder, 0xC0 ); // HiZ
-                //sendDevCommand( kCmdSsd1680WriteBorder, 0x04 ); // Follow LUT1 (White)
             else
-                sendDevCommand( kCmdSsd1680WriteBorder, 0x00 ); // Follow LUT0 (Black)
+                sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1 (White)
 
             displayReset = true;
         }
@@ -826,23 +846,23 @@ void I2cSsd1680Rotated::display(bool partial)
 
         delay(2); // Wait for I2C->SPI at 1MHz
 
-        // If this is a non-partial update, write the same data to the Red RAM so the SSD1680 can
+        // If background is true, write the same data to the Red RAM so the SSD1680 can
         // diff it on the next partial write
 
-        // if (!partial)
-        // {
-        //     // set the start address to write the updated data to the devices screen
-        //     // buffer
-        //     setScreenBufferAddress(i, transferRange.min, transferRange.max);
+        if (background)
+        {
+            // set the start address to write the updated data to the devices screen
+            // buffer
+            setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-        //     sendDevCommand(kCmdSsd1680WriteRamRed);
+            sendDevCommand(kCmdSsd1680WriteRamRed);
 
-        //     // send the dirty data to the device
-        //     sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
-        //                 transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
+            // send the dirty data to the device
+            sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
+                        transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
-        //     delay(2); // Wait for I2C->SPI at 1MHz
-        // }
+            delay(2); // Wait for I2C->SPI at 1MHz
+        }
 
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear

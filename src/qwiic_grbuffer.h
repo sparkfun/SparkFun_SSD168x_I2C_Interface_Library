@@ -230,7 +230,7 @@ class QwGrBufferDevice : protected _QwIDraw
     void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_ON);
 
     // subclass interface
-    virtual void display(bool partial) = 0;
+    virtual void display(bool partial, bool background) = 0;
     virtual void erase(void) = 0;
 
   protected:

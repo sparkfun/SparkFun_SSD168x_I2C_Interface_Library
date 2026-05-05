@@ -94,7 +94,7 @@ typedef struct {
   const uint8_t followingBytes[3];
   const bool delayAfter;
   const unsigned long delayDuration;
-  const bool busyAfter;
+  const bool checkBusyAfter;
 } ssd1680InitCodeEntry;
 
 const ssd1680InitCodeEntry ssd1680InitCode[] = {
@@ -105,10 +105,10 @@ const ssd1680InitCodeEntry ssd1680InitCode[] = {
   //{ kCmdSsd1680TempSensorWrite, 2, { 0x5A, 0 }, false, 0, false }, // 4-Gray
   //{ kCmdSsd1680DisplayUpdateCtrl2, 1, { 0x91 }, false, 0, false }, // Load temperature value
   //{ kCmdSsd1680MasterActivate, 0, { 0 }, true, 10, true }, // Display update sequence
-  { kCmdSsd1680WriteBorder, 1, { 0x00 }, false, 0, false }, // Follow LUT0 (Black)
+  { kCmdSsd1680WriteBorder, 1, { 0x05 }, false, 0, false }, // Follow LUT1 (White)
   { kCmdSsd1680SetRamCounterX, 1, { 0 }, false, 0, false },
   { kCmdSsd1680SetRamCounterY, 2, { 0, 0 }, false, 0, false },
-  { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x00, 0x80 }, false, 0, false }, // Normal Red RAM, Normal BW RAM content, S8-167
+  { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x88, 0x80 }, false, 0, false }, // **Inverted** Red RAM, **Inverted** BW RAM content, S8-167
   { kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0, false }, // VCOM -0.2
   //{ kCmdSsd1680WriteVcom, 1, { 0x36 }, false, 0, false }, // VCOM -1.35
   //{ kCmdSsd1680GateDrivingVoltage, 1, { 0x17 }, false, 0, false }, // VGH 20

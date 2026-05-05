@@ -94,19 +94,19 @@
 typedef struct {
   const uint8_t command;
   const uint8_t numFollowingBytes;
-  const uint8_t followingBytes[2];
+  const uint8_t followingBytes[3];
   const bool delayAfter;
   const unsigned long delayDuration;
+  const bool checkBusyAfter;
 } ssd1681InitCodeEntry;
 
 const ssd1681InitCodeEntry ssd1681InitCode[] = {
-  { kCmdSsd1681SwReset, 0, { 0 }, true, 20 },
-  { kCmdSsd1681DataEntryMode, 1, { 0x07 }, false, 0 }, // **Update in Y direction**, Y increment, X increment
-  { kCmdSsd1681WriteBorder, 1, { 0x05 }, false, 0 }, // Follow LUT1
-  { kCmdSsd1681TempSensorControl, 1, { 0x80 }, false, 0 }, // Internal temperature sensor
-  { kCmdSsd1681SetRamCounterX, 1, { 0 }, false, 0 },
-  { kCmdSsd1681SetRamCounterY, 2, { 0, 0 }, false, 0 },
-  { kCmdSsd1681DisplayUpdateCtrl1, 1, { 0x48 }, false, 0 }, // Bypass Red RAM, **Inverse** BW RAM content
+  { kCmdSsd1681SwReset, 0, { 0 }, true, 20, true },
+  { kCmdSsd1681TempSensorControl, 1, { 0x80 }, false, 0, false }, // Internal temperature sensor
+  { kCmdSsd1681WriteBorder, 1, { 0x05 }, false, 0, false }, // Follow LUT1
+  { kCmdSsd1681SetRamCounterX, 1, { 0 }, false, 0, false },
+  { kCmdSsd1681SetRamCounterY, 2, { 0, 0 }, false, 0, false },
+  { kCmdSsd1681DisplayUpdateCtrl1, 1, { 0x88 }, false, 0, false }, // **Inverse** Red RAM, **Inverse** BW RAM content
 };
 
 const int numSsd1681InitCodeEntries = sizeof(ssd1681InitCode) / sizeof(ssd1681InitCodeEntry);
@@ -197,7 +197,7 @@ class I2cSsd1681 : public QwGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false); // send graphics buffer to the devices screen buffer
+    void display(bool partial = false, bool background = false); // send graphics buffer to the device screen buffer
     void erase(void);
 
     // Device setup
@@ -260,11 +260,11 @@ class I2cSsd1681 : public QwGrBufferDevice
 
   private:
     // Internal buffer management methods
-    bool setScreenBufferAddress(uint8_t page, uint8_t row);
+    bool setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t rowEnd);
     void initBuffers(void); // clear graphics and screen buffer
     void clearScreenBuffer(void);
     void resendGraphics(void);
-    void setupEpaperDevice(bool clearDisplay = true);
+    void setupEpaperDevice(bool clearBuffer = true);
 
     // device communication methods
     void sendDevCommand(uint8_t command);

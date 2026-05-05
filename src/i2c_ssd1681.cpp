@@ -136,9 +136,9 @@ static const rasterOPsFn m_rasterOps[] = {
     // COPY
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | (src & mask); },
     // NOT COPY
-    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((!src) & mask); },
+    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((~src) & mask); },
     // NOT DEST
-    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((!(*dst)) & mask); },
+    [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((~(*dst)) & mask); },
     // XOR
     [](uint8_t *dst, uint8_t src, uint8_t mask) -> void { *dst = (~mask & *dst) | ((*dst ^ src) & mask); },
     // Always Off
@@ -204,7 +204,7 @@ bool I2cSsd1681::init(void)
     m_isInitialized = true;
 
     // setup e-paper device - before initBuffers. Needs m_isInitialized
-    setupEpaperDevice(true);
+    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
 
     // Init internal/drawing buffers and device screen buffer
     initBuffers(); // Note: calls clearScreenBuffer
@@ -226,12 +226,19 @@ bool I2cSsd1681::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
-    // setup e-paper device
-    setupEpaperDevice(clearDisplay);
-
-    // Init internal/drawing buffers and device screen buffer
     if (clearDisplay)
-        initBuffers();
+    {
+        // setup e-paper device
+        setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+
+        // Init internal/drawing buffers and device screen buffer
+        initBuffers(); // Note: calls clearScreenBuffer
+    }
+    else
+    {
+        // setup e-paper device and clear the device screen buffer
+        setupEpaperDevice(true);
+    }
 
     return true;
 }
@@ -253,7 +260,7 @@ bool I2cSsd1681::reset(bool clearDisplay)
 // Method sends the init/setup commands to the OLED device, placing
 // it in a state for use by this driver/library.
 
-void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
+void I2cSsd1681::setupEpaperDevice(bool clearBuffer)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
@@ -261,7 +268,7 @@ void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
     sendDevReset();
 
     do {
-        delay(1);
+        delay(10);
     }
     while (isBusy());
 
@@ -278,6 +285,13 @@ void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
 
         if (ssd1681InitCode[i].delayAfter)
             delay(ssd1681InitCode[i].delayDuration);
+
+        if (ssd1681InitCode[i].checkBusyAfter)
+        {
+            do {
+                delay(10);
+            } while (isBusy());
+        }
     }
 
     uint8_t buffer[4];
@@ -296,7 +310,10 @@ void I2cSsd1681::setupEpaperDevice(bool clearDisplay)
     buffer[2] = 0;
     sendDevCommand( kCmdSsd1681DriverOutput, buffer, 3 );
 
-    if (clearDisplay)
+    // **Update in Y direction**, Y increment, X increment
+    sendDevCommand(kCmdSsd1681DataEntryMode, 0x07);
+
+    if (clearBuffer)
         clearScreenBuffer();
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -341,9 +358,19 @@ void I2cSsd1681::clearScreenBuffer(void)
 
     for (int i = 0; i < kMaxPageNumberSSD1681; i++)
     {
-        setScreenBufferAddress(i, 0);                // start of page
+        setScreenBufferAddress(i, 0, kPageMax); // start of page
 
         sendDevCommand(kCmdSsd1681WriteRamBW);
+
+        sendDevData((uint8_t *)emptyPage, kPageMax); // clear out page
+
+        delay(2);
+
+        // Repeat for Red RAM - used as the background / base map for partial updates
+        
+        setScreenBufferAddress(i, 0, kPageMax); // start of page
+
+        sendDevCommand(kCmdSsd1681WriteRamRed);
 
         sendDevData((uint8_t *)emptyPage, kPageMax); // clear out page
 
@@ -672,9 +699,9 @@ void I2cSsd1681::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
 // page.
 //
 
-bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
+bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t rowEnd)
 {
-    if (page >= m_nPages || row >= m_viewport.height)
+    if (page >= m_nPages || rowStart >= m_viewport.height || rowEnd >= m_viewport.height)
         return false;
 
     uint8_t buffer[4];
@@ -683,17 +710,17 @@ bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
     buffer[1] = page;
     sendDevCommand( kCmdSsd1681SetRamPosX, buffer, 2 );
 
-    buffer[0] = row;
-    buffer[1] = row >> 8; // 0 (row is uint8_t)
-    buffer[2] = (m_viewport.height - 1);
-    buffer[3] = (m_viewport.height - 1) >> 8; // 0 (row is uint8_t)
+    buffer[0] = rowStart;
+    buffer[1] = rowStart >> 8; // 0 (row is uint8_t)
+    buffer[2] = rowEnd;
+    buffer[3] = rowEnd >> 8; // 0 (row is uint8_t)
     sendDevCommand( kCmdSsd1681SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
     sendDevCommand( kCmdSsd1681SetRamCounterX, buffer, 1 );
 
-    buffer[0] = row;
-    buffer[1] = row >> 8; // 0 (row is uint8_t)
+    buffer[0] = rowStart;
+    buffer[1] = rowStart >> 8; // 0 (row is uint8_t)
     sendDevCommand( kCmdSsd1681SetRamCounterY, buffer, 2 );
 
     return true;
@@ -707,12 +734,13 @@ bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t row)
 // new graphics to display, and any currently displayed items that need to be
 // erased.
 
-void I2cSsd1681::display(bool partial)
+void I2cSsd1681::display(bool partial, bool background)
 {
-    if (partial)
-        sendDevCommand( kCmdSsd1681WriteBorder, 0x80 ); // VCOM
-    else
-        sendDevCommand( kCmdSsd1681WriteBorder, 0x05 ); // Follow LUT1
+    // If background is true, ensure partial is false
+    if (background)
+        partial = false;
+
+    bool displayReset = false;
 
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
@@ -734,9 +762,27 @@ void I2cSsd1681::display(bool partial)
                                         // page were null
             continue;                   // next
 
+        if (partial || !displayReset)
+        {
+            sendDevReset();
+
+            delay(10);
+
+            do {
+                delay(1);
+            } while(isBusy());
+
+            if (partial)
+                sendDevCommand( kCmdSsd1681WriteBorder, 0x80 ); // VCOM
+            else
+                sendDevCommand( kCmdSsd1681WriteBorder, 0x05 ); // Follow LUT1 (White)
+
+            displayReset = true;
+        }
+
         // set the start address to write the updated data to the devices screen
         // buffer
-        setScreenBufferAddress(i, transferRange.min);
+        setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
         sendDevCommand(kCmdSsd1681WriteRamBW);
 
@@ -745,6 +791,24 @@ void I2cSsd1681::display(bool partial)
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(2); // Wait for I2C->SPI at 1MHz
+
+        // If background is true, write the same data to the Red RAM so the SSD1681 can
+        // diff it on the next partial write
+
+        if (background)
+        {
+            // set the start address to write the updated data to the devices screen
+            // buffer
+            setScreenBufferAddress(i, transferRange.min, transferRange.max);
+
+            sendDevCommand(kCmdSsd1681WriteRamRed);
+
+            // send the dirty data to the device
+            sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+                        transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
+
+            delay(2); // Wait for I2C->SPI at 1MHz
+        }
 
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear
@@ -759,9 +823,11 @@ void I2cSsd1681::display(bool partial)
     }
     m_pendingErase = false; // no longer pending
 
-    sendDevCommand( kCmdSsd1681DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
-
-    sendDevCommand( kCmdSsd1681MasterActivate ); // Activate
+    if (displayReset) // If some dirty pixels were sent, activate the display
+    {
+        sendDevCommand( kCmdSsd1681DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
+        sendDevCommand( kCmdSsd1681MasterActivate ); // Activate
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

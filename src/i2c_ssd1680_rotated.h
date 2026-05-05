@@ -127,7 +127,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false); // send graphics buffer to the devices screen buffer
+    void display(bool partial = false, bool background = false); // send graphics buffer to the device screen buffer
     void erase(void);
 
     // Device setup
@@ -194,7 +194,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     void initBuffers(void); // clear graphics and screen buffer
     void clearScreenBuffer(void);
     void resendGraphics(void);
-    void setupEpaperDevice(bool clearDisplay = true);
+    void setupEpaperDevice(bool clearBuffer = true);
 
     // device communication methods
     void sendDevCommand(uint8_t command);
