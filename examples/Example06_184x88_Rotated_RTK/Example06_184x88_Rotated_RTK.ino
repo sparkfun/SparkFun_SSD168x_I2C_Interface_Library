@@ -10,7 +10,7 @@ SSD1680I2C184x88Rotated myDevice;
 #include "icons.h"
 
 // Change this to invert the colors
-const bool invertColors = true;
+const bool invertColors = false;
 
 // Top-Left corner
 const int startX = 28;
