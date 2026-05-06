@@ -7,6 +7,10 @@
 
 A library to support SSD1680/1 e-paper displays on I2C, using a I2C-SPI Bridge.
 
+This library is based heavily on the [SparkFun Qwiic OLED Arduino Library](https://github.com/sparkfun/SparkFun_Qwiic_OLED_Arduino_Library) and includes the same fonts and graphics support.
+
+It has been tested on the GoodDisplay GDEY0154D67 1.54" (200 x 200) and GDEM0097T61 0.97" (184 x 88) e-paper displays.
+
 The I2C to SPI Bridge is configured as a I2C peripheral with three registers: Control (Register 0x00), Data (Register 0x01) and Reset (Register 0x02).
 * All data written to Register 0x00 is bridged to SPI with the D/C# pin held low.
 * All data written to Register 0x01 is bridged to SPI with the D/C# pin held high.
