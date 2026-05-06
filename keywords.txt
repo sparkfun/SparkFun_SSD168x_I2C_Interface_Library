@@ -4,26 +4,67 @@
 # Class
 #########################################################
 
-# TODO: Add this
-TemplateClass KEYWORD1
+SSD1680I2C184x88	KEYWORD1
+SSD1681I2C200x200	KEYWORD1
+SSD1680I2CCustom	KEYWORD1
+SSD1681I2CCustom	KEYWORD1
+SSD1680I2C184x88Rotated	KEYWORD1
 
 #########################################################
 # Methods and Functions
 #########################################################
 
-# TODO: Add these
-begin KEYWORD2
+begin	KEYWORD2
+getWidth	KEYWORD2
+getHeight	KEYWORD2
+reset	KEYWORD2
+displayPartial	KEYWORD2
+displayBackground	KEYWORD2
+display	KEYWORD2
+erase	KEYWORD2
+deepSleep	KEYWORD2
+isBusy	KEYWORD2
+setFont	KEYWORD2
+getFont	KEYWORD2
+getFontName	KEYWORD2
+getStringWidth	KEYWORD2
+getStringHeight	KEYWORD2
+setDrawMode	KEYWORD2
+getDrawMode	KEYWORD2
+pixel	KEYWORD2
+line	KEYWORD2
+rectangle	KEYWORD2
+rectangleFill	KEYWORD2
+circle	KEYWORD2
+circleFill	KEYWORD2
+bitmap	KEYWORD2
+text	KEYWORD2
+setCursor	KEYWORD2
+setColor	KEYWORD2
+getColor	KEYWORD2
+write	KEYWORD2
+setXOffset	KEYWORD2
+setYOffset	KEYWORD2
+setDisplayWidth	KEYWORD2
+setDisplayHeight	KEYWORD2
 
 #########################################################
 # Constants
 #########################################################
 
-# TODO: Add these
-TEMPALTE_CONSTANT LITERAL1
+COLOR_ON	LITERAL1
+COLOR_OFF	LITERAL1
+grROPCopy	LITERAL1
+grROPNotCopy	LITERAL1
+grROPNot	LITERAL1
+grROPXOR	LITERAL1
+grROPOff	LITERAL1
+grROPOn	LITERAL1
 
 #########################################################
 # Structs
 #########################################################
 
-# TODO: Add these
-template_struct_t LITERAL3
+QwFont	LITERAL3
+QwBitmap	LITERAL3
+grRasterOp_t	LITERAL3

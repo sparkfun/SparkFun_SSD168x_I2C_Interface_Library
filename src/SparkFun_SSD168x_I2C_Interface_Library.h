@@ -2,11 +2,14 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a TI MSP430FR2433 as the I2C to SPI Bridge.
+// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
-// The MSP430FR2433 is configured as a I2C peripheral with two registers: Control (Register 0x00), and Data (Register 0x01).
+// The MSP430FR2433 is configured as a I2C peripheral with three registers: Control (Register 0x00),
+// Data (Register 0x01) and Reset (Register 0x02).
 // All data written to Register 0x00 is bridged to SPI with the D/C# pin held low.
 // All data written to Register 0x01 is bridged to SPI with the D/C# pin held high.
+// A write to Register 0x02 causes RST to be pulled low briefly.
+// I2C reads return bytes containing the e-paper BUSY flag in the LSB.
 //
 // SparkFun code, firmware, and software is released under the MIT License(http://opensource.org/licenses/MIT).
 //

@@ -2,11 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a TI MSP430FR2433 as the I2C to SPI Bridge.
-//
-// The MSP430FR2433 is configured as a I2C peripheral with two registers: Control (Register 0x00), and Data (Register 0x01).
-// All data written to Register 0x00 is bridged to SPI with the D/C# pin held low.
-// All data written to Register 0x01 is bridged to SPI with the D/C# pin held high.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // SparkFun code, firmware, and software is released under the MIT License(http://opensource.org/licenses/MIT).
 //
@@ -35,19 +31,20 @@
 
 // What is the max buffer size for this platform.
 
-#if defined(SERIAL_BUFFER_SIZE)
-#define kMaxTransferBuffer SERIAL_BUFFER_SIZE
+// #if defined(SERIAL_BUFFER_SIZE)
+// #define kMaxTransferBuffer SERIAL_BUFFER_SIZE
 
-#elif defined(I2C_BUFFER_LENGTH)
-#define kMaxTransferBuffer I2C_BUFFER_LENGTH
+// #elif defined(I2C_BUFFER_LENGTH)
+// #define kMaxTransferBuffer I2C_BUFFER_LENGTH
 
-#elif defined(BUFFER_LENGTH)
-#define kMaxTransferBuffer BUFFER_LENGTH
+// #elif defined(BUFFER_LENGTH)
+// #define kMaxTransferBuffer BUFFER_LENGTH
 
-#else // just the standard Arduino value
-#define kMaxTransferBuffer 32
+// #else // just the standard Arduino value
 
-#endif
+#define kMaxTransferBuffer 32 // STM32 is limited to 32 bytes. Not sure why...?
+
+// #endif
 
 // What we use for transfer chunk size
 
