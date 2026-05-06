@@ -22,7 +22,7 @@ D13 (PB3)  SPI SCK  : also LED_BUILTIN on the NUCLEO-G031K8 dev board
 This code emulates a single I2C peripheral (address 0x48, unshifted) with three 'registers':
 Control (Register 0x00) : writes to this are bridged to SPI with the D/C# pin held low
 Data    (Register 0x01) : writes to this are bridged to SPI with the D/C# pin held high
-Reset   (Register 0x00) : writes to this generate a reset pulse on RST
+Reset   (Register 0x02) : writes to this generate a reset pulse on RST
 
 I2C reads from the peripheral return bytes containing the e-paper BUSY flag in the LSB
 
