@@ -42,6 +42,7 @@ void setup()
     Serial.println("Running OLED example");
 
     Wire.begin();
+    Wire.setClock(400000);
 
     // Initalize the device and related graphics system
     if (myDevice.begin() == false)
