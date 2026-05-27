@@ -1,10 +1,10 @@
-/* STM32 (G03) I2C to SPI Bridge - for e-paper displays
+/* STM32 (G031) I2C to SPI Bridge - for e-paper displays
 
 By P.C. for SparkFun Electronics, May 6th 2026
 
 Based loosely on example code from the STM32 Boards package
 
-This code runs on an STM32G03 processor. Tested on the STM32G031K8T6 on the NUCLEO-G031K8 dev board
+This code runs on an STM32G031 processor. Tested on the STM32G031K8T6 on the NUCLEO-G031K8 dev board
 
 This code acts as a I2C to SPI bridge, to interface with SSD168x e-paper displays
 
@@ -74,7 +74,7 @@ static volatile uint8_t bytesToSend;
 void setup()
 {
   Serial.begin(115200); // start serial for output
-  Serial.println("STM32 G03 I2C SPI Bridge");
+  Serial.println("STM32 G031 I2C SPI Bridge");
   Serial.println("========================");
   Serial.println("D4  (PA10) I2C SDA");
   Serial.println("D5  (PA9)  I2C SCL");
