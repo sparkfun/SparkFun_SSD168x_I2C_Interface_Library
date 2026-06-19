@@ -45,4 +45,4 @@ public:
     }
 };
 
-#define QW_BMP_TRUCK QwBMPTruck::instance()
+#define QW_EP_BMP_TRUCK QwBMPTruck::instance()

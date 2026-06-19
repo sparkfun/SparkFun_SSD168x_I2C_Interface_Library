@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwFont5x7 final : public fontSingleton<QwFont5x7> {
+class QwEpFont5x7 final : public fontSingleton<QwEpFont5x7> {
 
 public:
     const uint8_t* data(void)
@@ -41,8 +41,8 @@ public:
         return font5x7_data;
     }
 
-    QwFont5x7()
-        : fontSingleton<QwFont5x7>(FONT_5X7_WIDTH,
+    QwEpFont5x7()
+        : fontSingleton<QwEpFont5x7>(FONT_5X7_WIDTH,
             FONT_5X7_HEIGHT,
             FONT_5X7_START,
             FONT_5X7_NCHAR,
@@ -52,4 +52,4 @@ public:
     }
 };
 
-#define QW_FONT_5X7 QwFont5x7::instance()
+#define QW_EP_FONT_5X7 QwEpFont5x7::instance()

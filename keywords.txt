@@ -65,6 +65,6 @@ grROPOn	LITERAL1
 # Structs
 #########################################################
 
-QwFont	LITERAL3
-QwBitmap	LITERAL3
+QwEpFont	LITERAL3
+QwEpBitmap	LITERAL3
 grRasterOp_t	LITERAL3

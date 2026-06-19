@@ -53,10 +53,10 @@ void setup()
     myDevice.rectangleFill(16, 16, myDevice.getWidth() - 32, myDevice.getHeight() - 32, COLOR_OFF);
 
     // Add a logo
-    myDevice.bitmap(16, 75, QW_BMP_SPARKFUN);
+    myDevice.bitmap(16, 75, QW_EP_BMP_SPARKFUN);
 
     // Display our text
-    myDevice.setFont(QW_FONT_LARGENUM);
+    myDevice.setFont(QW_EP_FONT_LARGENUM);
     myDevice.text(80, 75, "01234567");
 
     // There's nothing on the screen yet - Now send the graphics to the device

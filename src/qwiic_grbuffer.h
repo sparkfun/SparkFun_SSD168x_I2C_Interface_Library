@@ -196,9 +196,9 @@ class QwGrBufferDevice : protected _QwIDraw
 
     // Font methods
     void initFont(void);
-    void setFont(QwFont &font);
-    void setFont(const QwFont *font);
-    QwFont *font(void);
+    void setFont(QwEpFont &font);
+    void setFont(const QwEpFont *font);
+    QwEpFont *font(void);
 
     // Returns the size of a string - in pixels - using current font
     bool getStringSize(const char *text, uint16_t &width, uint16_t &height);
@@ -221,7 +221,7 @@ class QwGrBufferDevice : protected _QwIDraw
     void bitmap(uint8_t x0, uint8_t y0, uint8_t *pBitmap, uint8_t bmp_width, uint8_t bmp_height);
 
     // Bitmap draw - using a bitmap object
-    void bitmap(uint8_t x0, uint8_t y0, QwBitmap &bitmap);
+    void bitmap(uint8_t x0, uint8_t y0, QwEpBitmap &bitmap);
 
     void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_ON);
 
@@ -257,7 +257,7 @@ class QwGrBufferDevice : protected _QwIDraw
     _QwIDraw_vtable m_idraw;
 
     // Current Font
-    QwFont *m_currentFont;
+    QwEpFont *m_currentFont;
 
   private:
     bool initDrawFunctions(void);

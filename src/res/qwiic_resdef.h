@@ -90,16 +90,16 @@
 //          - Lastly, define a macro that makes the syntax of access easy. This macro calls the instance
 //              method of the singleton, getting access to the object that contains the data of the resource
 //              ex:
-//                  #define QW_BMP_TRUCK QwBMPTruck::instance()
+//                  #define QW_EP_BMP_TRUCK QwBMPTruck::instance()
 //
-//              To the user, they just have a bitmap, referenced as QW_BMP_TRUCK and can do the following
+//              To the user, they just have a bitmap, referenced as QW_EP_BMP_TRUCK and can do the following
 //                  ex:
-//                      uint8_t width = QW_BMP_TRUCK.width;
-//                      uint8_t height = QW_BMP_TRUCK.height;
+//                      uint8_t width = QW_EP_BMP_TRUCK.width;
+//                      uint8_t height = QW_EP_BMP_TRUCK.height;
 //
 //              And internal methods get the data of this bitmap object using the bitmap() method
 //                  ex:
-//                      const uint8_t * pData = QW_BMP_TRUCK.data();
+//                      const uint8_t * pData = QW_EP_BMP_TRUCK.data();
 //
 //  It shoulds complicated - it isn't. Just look at examples in ths folder and copy when
 //  adding new resources.
@@ -107,7 +107,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Simple Bitmap class definition
 
-class QwBitmap {
+class QwEpBitmap {
 
 public:
     uint8_t width;
@@ -115,7 +115,7 @@ public:
     virtual const uint8_t* data(void) { return nullptr; };
 
 protected:
-    QwBitmap(uint8_t w, uint8_t h)
+    QwEpBitmap(uint8_t w, uint8_t h)
         : width { w }
         , height { h }
     {
@@ -124,7 +124,7 @@ protected:
 
 // Template that creates a singleton for bitmaps.
 template <typename T>
-class bmpSingleton : public QwBitmap {
+class bmpSingleton : public QwEpBitmap {
 public:
     static T& instance(void)
     {
@@ -137,13 +137,13 @@ public:
 
 protected:
     bmpSingleton() { }
-    using QwBitmap::QwBitmap; // inherit contructor
+    using QwEpBitmap::QwEpBitmap; // inherit contructor
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Font things - class to hold font attributes
 
-class QwFont {
+class QwEpFont {
 
 public:
     uint8_t width;
@@ -156,7 +156,7 @@ public:
     virtual const uint8_t* data(void) { return nullptr; };
 
 protected:
-    QwFont(uint8_t w, uint8_t h, uint8_t st_chr, uint8_t n_chr, uint16_t m_w, const char* f_name)
+    QwEpFont(uint8_t w, uint8_t h, uint8_t st_chr, uint8_t n_chr, uint16_t m_w, const char* f_name)
         : width { w }
         , height { h }
         , start { st_chr }
@@ -169,7 +169,7 @@ protected:
 
 // Template that creates a singleton for bitmaps.
 template <typename T>
-class fontSingleton : public QwFont {
+class fontSingleton : public QwEpFont {
 public:
     static T& instance(void)
     {
@@ -182,5 +182,5 @@ public:
 
 protected:
     fontSingleton() { }
-    using QwFont::QwFont; // inherit constructor
+    using QwEpFont::QwEpFont; // inherit constructor
 };

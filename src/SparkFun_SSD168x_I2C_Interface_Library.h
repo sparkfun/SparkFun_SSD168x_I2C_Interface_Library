@@ -44,8 +44,8 @@
 #include <Wire.h>
 
 // Friendly typenames
-typedef QwFont QwiicFont;
-typedef QwBitmap QwiicBitmap;
+typedef QwEpFont QwiicFont;
+typedef QwEpBitmap QwiicBitmap;
 
 const uint8_t COLOR_ON = 1; // 1 indicates the pixel is 'on': black on e-paper (inverted)
 const uint8_t COLOR_OFF = 0; // 0 indicates the pixel is 'off': white on e-paper (inverted)
@@ -241,11 +241,11 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     //  Font            Include File            Font Variable       Description
     //  -----------     ---------------------   ----------------    ---------------------
-    //  5x7             <res/qw_fnt_5x7.h>      QW_FONT_5X7         A full, 5 x 7 font
-    //  31x48           <res/qw_fnt_31x48.h>    QW_FONT_31X48       A full, 31 x 48 font
-    //  Seven Segment   <res/qw_fnt_7segment.h> QW_FONT_7SEGMENT    Numbers only
-    //  8x16            <res/qw_fnt_8x16.h>     QW_FONT_8X16        A full, 8 x 16 font
-    //  Large Numbers   <res/qw_fnt_largenum.h> QW_FONT_LARGENUM    Numbers only
+    //  5x7             <res/qw_fnt_5x7.h>      QW_EP_FONT_5X7         A full, 5 x 7 font
+    //  31x48           <res/qw_fnt_31x48.h>    QW_EP_FONT_31X48       A full, 31 x 48 font
+    //  Seven Segment   <res/qw_fnt_7segment.h> QW_EP_FONT_7SEGMENT    Numbers only
+    //  8x16            <res/qw_fnt_8x16.h>     QW_EP_FONT_8X16        A full, 8 x 16 font
+    //  Large Numbers   <res/qw_fnt_largenum.h> QW_EP_FONT_LARGENUM    Numbers only
     //
     //  For each font, the font variables are objects with the following attributes:
     //
@@ -261,7 +261,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     //     #include <res/qw_fnt_31x48.h>
     //
-    //     int myFontWidth = QW_FONT_31X48.width;
+    //     int myFontWidth = QW_EP_FONT_31X48.width;
     //
 
     void setFont(QwiicFont &theFont)

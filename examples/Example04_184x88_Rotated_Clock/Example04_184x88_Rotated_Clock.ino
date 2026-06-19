@@ -62,7 +62,7 @@ void setup()
     myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, invertColors ? COLOR_ON : COLOR_OFF);
 
     // Add the 0000:00:00 held in previousTime - this becomes the background for partial updates
-    myDevice.setFont(QW_FONT_LARGENUM);
+    myDevice.setFont(QW_EP_FONT_LARGENUM);
     myDevice.text(xStart, yStart, previousTime, invertColors ? COLOR_OFF : COLOR_ON);
 
     // There's nothing on the screen yet

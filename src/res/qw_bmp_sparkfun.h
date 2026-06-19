@@ -45,4 +45,4 @@ public:
     }
 };
 
-#define QW_BMP_SPARKFUN QwBMPSparkFun::instance()
+#define QW_EP_BMP_SPARKFUN QwBMPSparkFun::instance()

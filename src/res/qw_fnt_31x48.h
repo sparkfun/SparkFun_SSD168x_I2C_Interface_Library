@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwFont31x48 final : public fontSingleton<QwFont31x48> {
+class QwEpFont31x48 final : public fontSingleton<QwEpFont31x48> {
 
 public:
     const uint8_t* data(void)
@@ -41,8 +41,8 @@ public:
         return font31x48_data;
     }
 
-    QwFont31x48()
-        : fontSingleton<QwFont31x48>(FONT_31X48_WIDTH,
+    QwEpFont31x48()
+        : fontSingleton<QwEpFont31x48>(FONT_31X48_WIDTH,
             FONT_31X48_HEIGHT,
             FONT_31X48_START,
             FONT_31X48_NCHAR,
@@ -52,4 +52,4 @@ public:
     }
 };
 
-#define QW_FONT_31X48 QwFont31x48::instance()
+#define QW_EP_FONT_31X48 QwEpFont31x48::instance()

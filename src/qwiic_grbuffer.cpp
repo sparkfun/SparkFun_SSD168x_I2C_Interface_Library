@@ -147,14 +147,14 @@ bool QwGrBufferDevice::init(void)
 void QwGrBufferDevice::initFont(void)
 {
     if (!m_currentFont)
-        m_currentFont = &QW_FONT_5X7;
+        m_currentFont = &QW_EP_FONT_5X7;
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // font()
 //
 // Return the current font.
 
-QwFont *QwGrBufferDevice::font(void)
+QwEpFont *QwGrBufferDevice::font(void)
 {
     if (m_currentFont == nullptr) // device hasn't been init'd - maybe ? Go default
         initFont();
@@ -167,7 +167,7 @@ QwFont *QwGrBufferDevice::font(void)
 //
 // Object ref version
 
-void QwGrBufferDevice::setFont(QwFont &font)
+void QwGrBufferDevice::setFont(QwEpFont &font)
 {
     // just call the pointer version of this method
     setFont(&font);
@@ -177,10 +177,10 @@ void QwGrBufferDevice::setFont(QwFont &font)
 //
 // Object pointer version
 
-void QwGrBufferDevice::setFont(const QwFont *font)
+void QwGrBufferDevice::setFont(const QwEpFont *font)
 {
     if (font)
-        m_currentFont = (QwFont *)font;
+        m_currentFont = (QwEpFont *)font;
     else if (!m_currentFont) // null passed, we have no default set - init font.
         initFont();
 }
@@ -205,7 +205,7 @@ bool QwGrBufferDevice::getStringSize(const char *text, uint16_t &width, uint16_t
 
     // The 5x7 font width is off by one - historical - was same in orig lib, which fonts
     // are used.
-    if (m_currentFont == &QW_FONT_5X7)
+    if (m_currentFont == &QW_EP_FONT_5X7)
         width += sLen;
 
     height = (sLen > 0 ? m_currentFont->height : 0);
@@ -535,7 +535,7 @@ void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t *pBitmap, uint8_t 
 ////////////////////////////////////////////////////////////////////////////////////////
 // bitmap() - use a bitmap object
 //
-void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, QwBitmap &theBMP)
+void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, QwEpBitmap &theBMP)
 {
     // just pass to graphics device
     (*m_idraw.drawBitmap)(this, x0, y0, theBMP.width, theBMP.height, (uint8_t *)theBMP.data(), theBMP.width,

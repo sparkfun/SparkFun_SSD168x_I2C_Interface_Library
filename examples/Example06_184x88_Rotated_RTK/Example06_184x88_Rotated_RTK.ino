@@ -57,7 +57,7 @@ void setup()
     myDevice.rectangleFill(0, 0, myDevice.getWidth(), myDevice.getHeight(), invertColors ? COLOR_ON : COLOR_OFF);
 
     // Add the BT MAC top right
-    myDevice.setFont(QW_FONT_5X7);
+    myDevice.setFont(QW_EP_FONT_5X7);
     myDevice.text( startX + 0, startY + 0, "A4DA", invertColors ? COLOR_OFF : COLOR_ON);
 
     // More text
@@ -94,7 +94,7 @@ void loop()
     if (invertColors)
         myDevice.setDrawMode( invertColors ? grROPCopy : grROPNotCopy );
 
-    myDevice.setFont(QW_FONT_8X16);
+    myDevice.setFont(QW_EP_FONT_8X16);
 
     myDevice.rectangleFill( startX + 16, startY + 27, 5 * 8, 16, invertColors ? COLOR_ON : COLOR_OFF );
     sprintf(theText, ":.%03d", loopCount % 1000);
