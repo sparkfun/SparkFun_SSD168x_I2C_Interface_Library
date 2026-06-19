@@ -44,8 +44,8 @@
 #include <Wire.h>
 
 // Friendly typenames
-typedef QwEpFont QwiicFont;
-typedef QwEpBitmap QwiicBitmap;
+typedef QwEpFont QwiicEpFont;
+typedef QwEpBitmap QwiicEpBitmap;
 
 const uint8_t COLOR_ON = 1; // 1 indicates the pixel is 'on': black on e-paper (inverted)
 const uint8_t COLOR_OFF = 0; // 0 indicates the pixel is 'off': white on e-paper (inverted)
@@ -75,7 +75,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     DeviceType m_device;
 
   private:
-    QwI2C m_i2cBus; // our i2c object
+    QwEpI2C m_i2cBus; // our i2c object
 
     // for the Aruduino print functionality
     uint8_t m_cursorX;
@@ -118,7 +118,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
         // Get our font height ... a default font is set during init ...
         if (bStatus)
         {
-            QwiicFont *pFont = m_device.font();
+            QwiicEpFont *pFont = m_device.font();
             if (pFont)
                 m_cursorY = pFont->height;
         }
@@ -264,11 +264,11 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //     int myFontWidth = QW_EP_FONT_31X48.width;
     //
 
-    void setFont(QwiicFont &theFont)
+    void setFont(QwiicEpFont &theFont)
     {
         m_device.setFont(theFont);
     }
-    void setFont(const QwiicFont *theFont)
+    void setFont(const QwiicEpFont *theFont)
     {
         m_device.setFont(theFont);
     }
@@ -282,7 +282,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // ---------    -----------------------------
     //  retval      A pointer to the current font. See setFont() for font object details.
 
-    QwiicFont *getFont(void)
+    QwiicEpFont *getFont(void)
     {
         return m_device.font();
     }
@@ -294,7 +294,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 
     String getFontName(void)
     {
-        QwiicFont *pFont = m_device.font();
+        QwiicEpFont *pFont = m_device.font();
 
         if (!pFont)
             return String("");
@@ -368,7 +368,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //  grROPOff        A value of 0, or 'OFF' is drawn to the destination
     //  grROPOn         A value of 1, or 'ON' is drawn to the destination
 
-    void setDrawMode(grRasterOp_t rop)
+    void setDrawMode(grEpRasterOp_t rop)
     {
         m_device.setRasterOp(rop);
     }
@@ -383,7 +383,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // ---------    -----------------------------
     //  retval      The current raster operation (ROP) of the graphics system.
 
-    grRasterOp_t getDrawMode(void)
+    grEpRasterOp_t getDrawMode(void)
     {
         return m_device.rasterOp();
     }
@@ -549,7 +549,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // y0           The Y coordinate to place the bitmap - upper left corner
     // bitmap       A bitmap object
 
-    void bitmap(uint8_t x0, uint8_t y0, QwiicBitmap &bitmap)
+    void bitmap(uint8_t x0, uint8_t y0, QwiicEpBitmap &bitmap)
     {
         m_device.bitmap(x0, y0, bitmap);
     }
@@ -642,7 +642,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 
     virtual size_t write(uint8_t theChar)
     {
-        QwiicFont *pFont = m_device.font();
+        QwiicEpFont *pFont = m_device.font();
 
         if (!pFont) // no Font?! No dice
             return 0;

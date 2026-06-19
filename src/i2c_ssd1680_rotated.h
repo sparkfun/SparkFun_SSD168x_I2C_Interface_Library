@@ -104,7 +104,7 @@
 // I2cSsd1680Rotated
 // A buffer graphics device to support the SSD1680 graphics hardware
 
-class I2cSsd1680Rotated : public QwGrBufferDevice
+class I2cSsd1680Rotated : public QwEpGrBufferDevice
 {
   private:
     void setupDefaults(void);
@@ -117,7 +117,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     I2cSsd1680Rotated(uint8_t width, uint8_t height) : I2cSsd1680Rotated(0, 0, width, height){};
 
     // call super class
-    I2cSsd1680Rotated(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwGrBufferDevice(x0, y0, width, height)
+    I2cSsd1680Rotated(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwEpGrBufferDevice(x0, y0, width, height)
     {
         setupDefaults();
     };
@@ -136,7 +136,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     bool reset(bool clearDisplay = true);
 
     // method to set the communication bus this object should use
-    void setCommBus(QwI2C &theBus, uint8_t id_bus);
+    void setCommBus(QwEpI2C &theBus, uint8_t id_bus);
 
     // Set the current color/pixel write operation
     void setColor(uint8_t color);
@@ -144,12 +144,12 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     // default address of the device - expect the sub to fill in.
     uint8_t default_address;
 
-    void setRasterOp(grRasterOp_t rop)
+    void setRasterOp(grEpRasterOp_t rop)
     {
         m_rop = rop;
     }
 
-    grRasterOp_t rasterOp(void)
+    grEpRasterOp_t rasterOp(void)
     {
         return m_rop;
     }
@@ -165,7 +165,7 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
 
     ///////////////////////////////////////////////////////////////////////////
     // Internal, fast draw routines - this are used in the overall
-    // draw interface (_QwIDraw) for this object/device/system.
+    // draw interface (_QwEpIDraw) for this object/device/system.
     //
     // >> Pixels <<
     void drawPixel(uint8_t x, uint8_t y, uint8_t clr);
@@ -206,16 +206,16 @@ class I2cSsd1680Rotated : public QwGrBufferDevice
     // Buffer variables
     uint8_t *m_pBuffer;                      // Pointer to the graphics buffer
     uint8_t m_nPages;                        // number of pages for current device
-    pageState_t m_pageState[kMaxPageNumberSSD1680]; // page state descriptors
-    pageState_t m_pageErase[kMaxPageNumberSSD1680]; // keep track of erase boundaries
+    pageStateEp_t m_pageState[kMaxPageNumberSSD1680]; // page state descriptors
+    pageStateEp_t m_pageErase[kMaxPageNumberSSD1680]; // keep track of erase boundaries
     bool m_pendingErase;
 
     // display variables
     uint8_t m_color;    // current color (really 0 or 1)
-    grRasterOp_t m_rop; // current raster operation code
+    grEpRasterOp_t m_rop; // current raster operation code
 
     // I2C  things
-    QwI2C *m_i2cBus;      // pointer to our i2c bus object
+    QwEpI2C *m_i2cBus;      // pointer to our i2c bus object
     uint8_t m_i2cAddress; // address of the device
 
     // Stash values for settings that are unique to each device.

@@ -67,4 +67,4 @@ grROPOn	LITERAL1
 
 QwEpFont	LITERAL3
 QwEpBitmap	LITERAL3
-grRasterOp_t	LITERAL3
+grEpRasterOp_t	LITERAL3

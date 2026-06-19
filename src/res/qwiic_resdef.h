@@ -124,7 +124,7 @@ protected:
 
 // Template that creates a singleton for bitmaps.
 template <typename T>
-class bmpSingleton : public QwEpBitmap {
+class bmpEpSingleton : public QwEpBitmap {
 public:
     static T& instance(void)
     {
@@ -132,11 +132,11 @@ public:
         return instance;
     }
 
-    bmpSingleton(const bmpSingleton&) = delete;
-    bmpSingleton& operator=(const bmpSingleton) = delete;
+    bmpEpSingleton(const bmpEpSingleton&) = delete;
+    bmpEpSingleton& operator=(const bmpEpSingleton) = delete;
 
 protected:
-    bmpSingleton() { }
+    bmpEpSingleton() { }
     using QwEpBitmap::QwEpBitmap; // inherit contructor
 };
 
@@ -169,7 +169,7 @@ protected:
 
 // Template that creates a singleton for bitmaps.
 template <typename T>
-class fontSingleton : public QwEpFont {
+class fontEpSingleton : public QwEpFont {
 public:
     static T& instance(void)
     {
@@ -177,10 +177,10 @@ public:
         return instance;
     }
 
-    fontSingleton(const fontSingleton&) = delete;
-    fontSingleton& operator=(const fontSingleton) = delete;
+    fontEpSingleton(const fontEpSingleton&) = delete;
+    fontEpSingleton& operator=(const fontEpSingleton) = delete;
 
 protected:
-    fontSingleton() { }
+    fontEpSingleton() { }
     using QwEpFont::QwEpFont; // inherit constructor
 };

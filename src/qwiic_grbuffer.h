@@ -37,7 +37,7 @@
 #include "res/qwiic_resdef.h"
 
 // RECT!
-struct QwRect
+struct QwEpRect
 {
     uint16_t x;
     uint16_t y;
@@ -69,13 +69,13 @@ const uint8_t text_byte_bits[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x8
 #define swap_int(_a_, _b_) (((_a_) ^= (_b_)), ((_b_) ^= (_a_)), ((_a_) ^= (_b_)))
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-// _QwIDraw
+// _QwEpIDraw
 //
 // IDraw interface for the graphics system. Defines methods used to draw 2D primatives.
 //
 // Seperated out to enable easy vtable access and method dispatch short circuiting
 
-class _QwIDraw
+class _QwEpIDraw
 {
 
     // Pixel Methods
@@ -129,7 +129,7 @@ typedef void (*QwDrawBitmapFn)(void *, uint8_t, uint8_t, uint8_t, uint8_t, uint8
 typedef void (*QwDrawTextFn)(void *, uint8_t, uint8_t, const char *, uint8_t);
 
 // Define the vtable struct for IDraw
-struct _QwIDraw_vtable
+struct _QwEpIDraw_vtable
 {
     QwDrawPntFn drawPixel;
     QwDrawTwoPntFn drawLine;
@@ -144,19 +144,19 @@ struct _QwIDraw_vtable
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-//  QwGrBufferDevice
+//  QwEpGrBufferDevice
 //
 //  Buffer class - defines basics for a memory buffer drawing class. Note it subclasses
-//  from QwIDraw
+//  from QwEpIDraw
 
-class QwGrBufferDevice : protected _QwIDraw
+class QwEpGrBufferDevice : protected _QwEpIDraw
 {
 
   public:
     // Constructors
-    QwGrBufferDevice() : m_currentFont{nullptr} {};
-    QwGrBufferDevice(uint8_t width, uint8_t height) : QwGrBufferDevice(0, 0, width, height){};
-    QwGrBufferDevice(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwGrBufferDevice()
+    QwEpGrBufferDevice() : m_currentFont{nullptr} {};
+    QwEpGrBufferDevice(uint8_t width, uint8_t height) : QwEpGrBufferDevice(0, 0, width, height){};
+    QwEpGrBufferDevice(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height) : QwEpGrBufferDevice()
     {
         setViewport(x0, y0, width, height);
     };
@@ -170,7 +170,7 @@ class QwGrBufferDevice : protected _QwIDraw
         m_viewport.height = height;
     };
 
-    QwRect viewport(void)
+    QwEpRect viewport(void)
     {
         return m_viewport;
     };
@@ -230,9 +230,9 @@ class QwGrBufferDevice : protected _QwIDraw
     virtual void erase(void) = 0;
 
   protected:
-    QwRect m_viewport;
+    QwEpRect m_viewport;
 
-    // Internal, fast draw routines - These implement QwIDraw
+    // Internal, fast draw routines - These implement QwEpIDraw
 
     // Pixels
     //    At a minimum, a sub-class must implement a pixel set function
@@ -254,7 +254,7 @@ class QwGrBufferDevice : protected _QwIDraw
     virtual void drawText(uint8_t x0, uint8_t y0, const char *text, uint8_t clr);
 
     // Our drawing interface - open to sub-classes ...
-    _QwIDraw_vtable m_idraw;
+    _QwEpIDraw_vtable m_idraw;
 
     // Current Font
     QwEpFont *m_currentFont;

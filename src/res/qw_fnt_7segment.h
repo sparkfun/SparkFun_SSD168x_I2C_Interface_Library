@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwEpFont7Segment final : public fontSingleton<QwEpFont7Segment> {
+class QwEpFont7Segment final : public fontEpSingleton<QwEpFont7Segment> {
 
 public:
     const uint8_t* data(void)
@@ -42,7 +42,7 @@ public:
     }
 
     QwEpFont7Segment()
-        : fontSingleton<QwEpFont7Segment>(FONT_7SEG_WIDTH,
+        : fontEpSingleton<QwEpFont7Segment>(FONT_7SEG_WIDTH,
             FONT_7SEG_HEIGHT,
             FONT_7SEG_START,
             FONT_7SEG_NCHAR,

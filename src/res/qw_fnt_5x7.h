@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwEpFont5x7 final : public fontSingleton<QwEpFont5x7> {
+class QwEpFont5x7 final : public fontEpSingleton<QwEpFont5x7> {
 
 public:
     const uint8_t* data(void)
@@ -42,7 +42,7 @@ public:
     }
 
     QwEpFont5x7()
-        : fontSingleton<QwEpFont5x7>(FONT_5X7_WIDTH,
+        : fontEpSingleton<QwEpFont5x7>(FONT_5X7_WIDTH,
             FONT_5X7_HEIGHT,
             FONT_5X7_START,
             FONT_5X7_NCHAR,

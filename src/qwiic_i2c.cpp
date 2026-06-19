@@ -53,7 +53,7 @@ const static uint16_t kChunkSize = kMaxTransferBuffer - 1;
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Constructor
 
-QwI2C::QwI2C(void)
+QwEpI2C::QwEpI2C(void)
 {
     m_i2cPort = nullptr;
 }
@@ -63,7 +63,7 @@ QwI2C::QwI2C(void)
 // Methods to init/setup this device. The caller can provide a Wire Port, or this class
 // will use the default
 
-bool QwI2C::init(TwoWire& wirePort)
+bool QwEpI2C::init(TwoWire& wirePort)
 {
     // if we don't have a wire port already
     if (!m_i2cPort)
@@ -74,7 +74,7 @@ bool QwI2C::init(TwoWire& wirePort)
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-bool QwI2C::init(void)
+bool QwEpI2C::init(void)
 {
     // do we already have a wire port?
     if (!m_i2cPort)
@@ -87,7 +87,7 @@ bool QwI2C::init(void)
 // ping()
 //
 // Is a device connected?
-bool QwI2C::ping(uint8_t i2c_address)
+bool QwEpI2C::ping(uint8_t i2c_address)
 {
     m_i2cPort->beginTransmission(i2c_address);
     return m_i2cPort->endTransmission() == 0;
@@ -98,7 +98,7 @@ bool QwI2C::ping(uint8_t i2c_address)
 //
 // Select a register
 
-bool QwI2C::writeRegister(uint8_t i2c_address, uint8_t offset)
+bool QwEpI2C::writeRegister(uint8_t i2c_address, uint8_t offset)
 {
     m_i2cPort->beginTransmission(i2c_address);
     m_i2cPort->write(offset);
@@ -110,7 +110,7 @@ bool QwI2C::writeRegister(uint8_t i2c_address, uint8_t offset)
 //
 // Write a byte to a register
 
-bool QwI2C::writeRegisterByte(uint8_t i2c_address, uint8_t offset, uint8_t dataToWrite)
+bool QwEpI2C::writeRegisterByte(uint8_t i2c_address, uint8_t offset, uint8_t dataToWrite)
 {
     m_i2cPort->beginTransmission(i2c_address);
     m_i2cPort->write(offset);
@@ -123,7 +123,7 @@ bool QwI2C::writeRegisterByte(uint8_t i2c_address, uint8_t offset, uint8_t dataT
 //
 // Write a block of data to a device. This routine will chunk over the data if needed
 
-int QwI2C::writeRegisterRegion(uint8_t i2c_address, uint8_t offset, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms)
+int QwEpI2C::writeRegisterRegion(uint8_t i2c_address, uint8_t offset, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms)
 {
     uint16_t nSent;
     uint16_t nRemaining = length;
@@ -161,7 +161,7 @@ int QwI2C::writeRegisterRegion(uint8_t i2c_address, uint8_t offset, uint8_t* dat
 //
 // Read a byte from a virtual register
 
-uint8_t QwI2C::readRegisterByte(uint8_t i2c_address)
+uint8_t QwEpI2C::readRegisterByte(uint8_t i2c_address)
 {
     if (m_i2cPort->requestFrom(i2c_address, 1))
         if (m_i2cPort->available())

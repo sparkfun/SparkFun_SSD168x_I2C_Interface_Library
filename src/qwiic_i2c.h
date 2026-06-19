@@ -37,10 +37,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-class QwI2C {
+class QwEpI2C {
 
 public:
-    QwI2C(void);
+    QwEpI2C(void);
 
     bool init(void);
     bool init(TwoWire& wirePort);

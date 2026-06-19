@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-typedef enum gr_op_funcs_
+typedef enum gr_ep_op_funcs_
 {
     grROPCopy = 0,
     grROPNotCopy = 1,
@@ -49,10 +49,10 @@ typedef enum gr_op_funcs_
     grROPXOR = 3,
     grROPOff = 4,
     grROPOn = 5
-} grRasterOp_t;
+} grEpRasterOp_t;
 
 typedef struct
 {
     int16_t min;
     int16_t max;
-} pageState_t;
+} pageStateEp_t;

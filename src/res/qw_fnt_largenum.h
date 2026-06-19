@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwEpFontLargeNum final : public fontSingleton<QwEpFontLargeNum> {
+class QwEpFontLargeNum final : public fontEpSingleton<QwEpFontLargeNum> {
 
 public:
     const uint8_t* data(void)
@@ -42,7 +42,7 @@ public:
     }
 
     QwEpFontLargeNum()
-        : fontSingleton<QwEpFontLargeNum>(FONT_LARGENUM_WIDTH,
+        : fontEpSingleton<QwEpFontLargeNum>(FONT_LARGENUM_WIDTH,
             FONT_LARGENUM_HEIGHT,
             FONT_LARGENUM_START,
             FONT_LARGENUM_NCHAR,

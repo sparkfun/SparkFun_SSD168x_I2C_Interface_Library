@@ -58,9 +58,9 @@
 //
 // function to get the vTable from an object reference
 
-_QwIDraw_vtable *GetIDrawVTable(_QwIDraw *obj)
+_QwEpIDraw_vtable *GetIDrawVTable(_QwEpIDraw *obj)
 {
-    _QwIDraw_vtable **vtable_ptr = (_QwIDraw_vtable **)obj;
+    _QwEpIDraw_vtable **vtable_ptr = (_QwEpIDraw_vtable **)obj;
     return *vtable_ptr;
 }
 
@@ -68,7 +68,7 @@ _QwIDraw_vtable *GetIDrawVTable(_QwIDraw *obj)
 // initDrawFunctions()
 //
 // This method pulls out the vtable of this object and determines what methods are
-// defined in the QwIDraw interface.
+// defined in the QwEpIDraw interface.
 //
 // Using what is defined, the functions in m_idraw interface are set. This class uses
 // the draw functions in this interface to skip call time vtable method lookup and call the
@@ -79,19 +79,19 @@ _QwIDraw_vtable *GetIDrawVTable(_QwIDraw *obj)
 // setup fallbacks if need.
 //
 
-bool QwGrBufferDevice::initDrawFunctions(void)
+bool QwEpGrBufferDevice::initDrawFunctions(void)
 {
-    // Get our vtable, and that of a null _QwIDraw object/interface.
+    // Get our vtable, and that of a null _QwEpIDraw object/interface.
     // Use these to determine if a method was overriden/implemented and
     // set defaults ... etc
 
-    _QwIDraw null_obj_; // dummy object
+    _QwEpIDraw null_obj_; // dummy object
 
     // copy in the vtable to our draw interface
     m_idraw = *GetIDrawVTable(this);
 
     // Null vtable - has defaults setup
-    _QwIDraw_vtable *null_vtable = GetIDrawVTable(&null_obj_);
+    _QwEpIDraw_vtable *null_vtable = GetIDrawVTable(&null_obj_);
 
     // Review implemented methods - take actions as needed
 
@@ -99,7 +99,7 @@ bool QwGrBufferDevice::initDrawFunctions(void)
     if (m_idraw.drawPixel == null_vtable->drawPixel)
     {
         // ERROR - drawPixel is required
-        fprintf(stderr, "[ERROR][QwGrBufferDevice] Render class must implement drawPixel method\n");
+        fprintf(stderr, "[ERROR][QwEpGrBufferDevice] Render class must implement drawPixel method\n");
         return false;
     }
 
@@ -128,7 +128,7 @@ bool QwGrBufferDevice::initDrawFunctions(void)
 // Intialize the class. User called as part of the startup process of the library.
 //
 
-bool QwGrBufferDevice::init(void)
+bool QwEpGrBufferDevice::init(void)
 {
     // Initialize our Font
     initFont();
@@ -144,7 +144,7 @@ bool QwGrBufferDevice::init(void)
 //
 // Set the default font if one hasn't been set yet
 
-void QwGrBufferDevice::initFont(void)
+void QwEpGrBufferDevice::initFont(void)
 {
     if (!m_currentFont)
         m_currentFont = &QW_EP_FONT_5X7;
@@ -154,7 +154,7 @@ void QwGrBufferDevice::initFont(void)
 //
 // Return the current font.
 
-QwEpFont *QwGrBufferDevice::font(void)
+QwEpFont *QwEpGrBufferDevice::font(void)
 {
     if (m_currentFont == nullptr) // device hasn't been init'd - maybe ? Go default
         initFont();
@@ -167,7 +167,7 @@ QwEpFont *QwGrBufferDevice::font(void)
 //
 // Object ref version
 
-void QwGrBufferDevice::setFont(QwEpFont &font)
+void QwEpGrBufferDevice::setFont(QwEpFont &font)
 {
     // just call the pointer version of this method
     setFont(&font);
@@ -177,7 +177,7 @@ void QwGrBufferDevice::setFont(QwEpFont &font)
 //
 // Object pointer version
 
-void QwGrBufferDevice::setFont(const QwEpFont *font)
+void QwEpGrBufferDevice::setFont(const QwEpFont *font)
 {
     if (font)
         m_currentFont = (QwEpFont *)font;
@@ -190,7 +190,7 @@ void QwGrBufferDevice::setFont(const QwEpFont *font)
 //
 // Return the size (width, height) in pixels of the given string using the current font
 
-bool QwGrBufferDevice::getStringSize(const char *text, uint16_t &width, uint16_t &height)
+bool QwEpGrBufferDevice::getStringSize(const char *text, uint16_t &width, uint16_t &height)
 {
     if (!m_currentFont) // no font?
         initFont();
@@ -221,7 +221,7 @@ bool QwGrBufferDevice::getStringSize(const char *text, uint16_t &width, uint16_t
 //
 // Set a pixel on the screen
 
-void QwGrBufferDevice::pixel(uint8_t x, uint8_t y, uint8_t clr)
+void QwEpGrBufferDevice::pixel(uint8_t x, uint8_t y, uint8_t clr)
 {
     // in range?
     if (x >= m_viewport.width || y >= m_viewport.height)
@@ -241,7 +241,7 @@ void QwGrBufferDevice::pixel(uint8_t x, uint8_t y, uint8_t clr)
 //      (x0, y0)   - Line origin
 //      (x1, y1)   - Line end
 
-void QwGrBufferDevice::line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
+void QwEpGrBufferDevice::line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
     // if we have a vertical or horizonal line, call the optimized drawing functions
 
@@ -258,7 +258,7 @@ void QwGrBufferDevice::line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint
 //
 // Core, internal line drawing method - performs a line rasterization algorithm
 
-void QwGrBufferDevice::drawLine(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
+void QwEpGrBufferDevice::drawLine(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
     // The rasterization method uses an increment of 1 to walk the desired line
     // to determine which pixels are being set in the buffer device.
@@ -320,7 +320,7 @@ void QwGrBufferDevice::drawLine(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, 
 //
 // Draw a rectangle on screen.
 
-void QwGrBufferDevice::rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
+void QwEpGrBufferDevice::rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
 {
     // Is this a line?
     if (width <= 1 || height <= 1)
@@ -344,7 +344,7 @@ void QwGrBufferDevice::rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t 
 //
 // Does the actual drawing/logic
 
-void QwGrBufferDevice::drawRect(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
+void QwEpGrBufferDevice::drawRect(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
 {
     // A rect is really just a series of vert and horz lines
 
@@ -366,7 +366,7 @@ void QwGrBufferDevice::drawRect(uint8_t x0, uint8_t y0, uint8_t width, uint8_t h
 ////////////////////////////////////////////////////////////////////////////////////////
 // rectangleFill()
 
-void QwGrBufferDevice::rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
+void QwEpGrBufferDevice::rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
 {
     // Is this a line?
     if (width <= 1 || height <= 1)
@@ -388,7 +388,7 @@ void QwGrBufferDevice::rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint
 //
 // Does the actual drawing/logic
 
-void QwGrBufferDevice::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
+void QwEpGrBufferDevice::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr)
 {
     uint8_t x1 = x0 + width - 1;
     uint8_t y1 = y0 + height - 1;
@@ -401,7 +401,7 @@ void QwGrBufferDevice::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, uin
 // circle()
 //
 
-void QwGrBufferDevice::circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
+void QwEpGrBufferDevice::circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
 {
     // Anything visible on screen?
     if (!radius || x0 - (int8_t)radius >= m_viewport.width || y0 - (int8_t)radius >= m_viewport.height)
@@ -421,7 +421,7 @@ void QwGrBufferDevice::circle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t cl
 //
 // Draw a circle
 
-void QwGrBufferDevice::drawCircle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
+void QwEpGrBufferDevice::drawCircle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
 {
     int8_t f = 1 - radius;
     int8_t ddF_x = 1;
@@ -463,7 +463,7 @@ void QwGrBufferDevice::drawCircle(uint8_t x0, uint8_t y0, uint8_t radius, uint8_
 //
 // Draw a filled circle
 
-void QwGrBufferDevice::circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
+void QwEpGrBufferDevice::circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
 {
     // Anything visible on screen?
     if (!radius || x0 - (int8_t)radius >= m_viewport.width || y0 - (int8_t)radius >= m_viewport.height)
@@ -481,7 +481,7 @@ void QwGrBufferDevice::circleFill(uint8_t x0, uint8_t y0, uint8_t radius, uint8_
 ////////////////////////////////////////////////////////////////////////////////////////
 // drawCircleFilled()
 //
-void QwGrBufferDevice::drawCircleFilled(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
+void QwEpGrBufferDevice::drawCircleFilled(uint8_t x0, uint8_t y0, uint8_t radius, uint8_t clr)
 {
     int8_t f = 1 - radius;
     int8_t ddF_x = 1;
@@ -516,7 +516,7 @@ void QwGrBufferDevice::drawCircleFilled(uint8_t x0, uint8_t y0, uint8_t radius, 
 //
 // Draw a bitmap on the screen
 
-void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *pBitmap, uint8_t bmp_width,
+void QwEpGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *pBitmap, uint8_t bmp_width,
                               uint8_t bmp_height)
 {
     (*m_idraw.drawBitmap)(this, x0, y0, x1, y1, pBitmap, bmp_width, bmp_height);
@@ -527,7 +527,7 @@ void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 //
 // Draw a bitmap on the screen
 
-void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t *pBitmap, uint8_t bmp_width, uint8_t bmp_height)
+void QwEpGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t *pBitmap, uint8_t bmp_width, uint8_t bmp_height)
 {
     (*m_idraw.drawBitmap)(this, x0, y0, bmp_width, bmp_height, pBitmap, bmp_width, bmp_height);
 }
@@ -535,7 +535,7 @@ void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, uint8_t *pBitmap, uint8_t 
 ////////////////////////////////////////////////////////////////////////////////////////
 // bitmap() - use a bitmap object
 //
-void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, QwEpBitmap &theBMP)
+void QwEpGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, QwEpBitmap &theBMP)
 {
     // just pass to graphics device
     (*m_idraw.drawBitmap)(this, x0, y0, theBMP.width, theBMP.height, (uint8_t *)theBMP.data(), theBMP.width,
@@ -546,7 +546,7 @@ void QwGrBufferDevice::bitmap(uint8_t x0, uint8_t y0, QwEpBitmap &theBMP)
 //
 // Draw a string on the screen using the current font
 
-void QwGrBufferDevice::text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr)
+void QwEpGrBufferDevice::text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr)
 {
     if (!text || x0 >= m_viewport.width || y0 >= m_viewport.height)
         return;
@@ -559,7 +559,7 @@ void QwGrBufferDevice::text(uint8_t x0, uint8_t y0, const char *text, uint8_t cl
 // Draw text - one pixel at a time. Based on the algorithm in the Micro OLED
 // Arduino library
 //
-void QwGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint8_t clr)
+void QwEpGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint8_t clr)
 {
     // check things
     if (!m_currentFont || !text)

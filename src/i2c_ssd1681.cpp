@@ -44,7 +44,7 @@
 // Given that these actions are taking place in the draw loop, macros are used
 // for performance considerations.
 //
-// These macros work with the pageState_t struct type.
+// These macros work with the pageStateEp_t struct type.
 //
 // Define unique values just outside of the screen buffer (SSD1681) page range
 // (0 base) Note: A page is 200 bytes in length
@@ -116,7 +116,7 @@
 // eleminates the need for switch/if statements in each draw routine. This is
 // basically classic ROPs'
 //
-// NOTE - the order in the arrays is based on grRasterOp_t enum
+// NOTE - the order in the arrays is based on grEpRasterOp_t enum
 //
 // The Graphic operator functions (ROPS)
 //      - Copy      - copy the pixel value in to the buffer (default)
@@ -190,7 +190,7 @@ bool I2cSsd1681::init(void)
         return false;
 
     // Super-class
-    if (!this->QwGrBufferDevice::init())
+    if (!this->QwEpGrBufferDevice::init())
         return false; // something isn't right
 
     // Number of pages used for this device?
@@ -319,7 +319,7 @@ void I2cSsd1681::setupEpaperDevice(bool clearBuffer)
 //
 // TODO -  In the *future*, generalize to match SDK
 
-void I2cSsd1681::setCommBus(QwI2C &theBus, uint8_t id_bus)
+void I2cSsd1681::setCommBus(QwEpI2C &theBus, uint8_t id_bus)
 {
     m_i2cBus = &theBus;
     m_i2cAddress = id_bus;
@@ -741,7 +741,7 @@ void I2cSsd1681::display(bool partial, bool background)
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
 
-    pageState_t transferRange;
+    pageStateEp_t transferRange;
 
     for (int i = 0; i < m_nPages; i++)
     {
