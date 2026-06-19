@@ -153,7 +153,7 @@ void I2cSsd1681::setupDefaults(void)
     default_address = {0};
     m_pBuffer = {nullptr};
     m_color = {1};
-    m_rop = {grROPCopy};
+    m_rop = {grEpROPCopy};
     m_i2cBus = {nullptr};
     m_i2cAddress = {0};
     m_isInitialized = {false};

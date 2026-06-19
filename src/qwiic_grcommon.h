@@ -43,12 +43,12 @@
 
 typedef enum gr_ep_op_funcs_
 {
-    grROPCopy = 0,
-    grROPNotCopy = 1,
-    grROPNot = 2,
-    grROPXOR = 3,
-    grROPOff = 4,
-    grROPOn = 5
+    grEpROPCopy = 0,
+    grEpROPNotCopy = 1,
+    grEpROPNot = 2,
+    grEpROPXOR = 3,
+    grEpROPOff = 4,
+    grEpROPOn = 5
 } grEpRasterOp_t;
 
 typedef struct

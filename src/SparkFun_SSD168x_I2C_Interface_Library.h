@@ -361,12 +361,12 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     //  ROP Code        Description
     //  ---------       -------------------------------------
-    //  grROPCopy       default Drawn pixel values are copied to the device screen
-    //  grROPNotCopy    A not operation is applied to the source value before copying to screen
-    //  grROPNot        A not operation is applied to the destination (screen) value
-    //  grROPXOR        A XOR operation is performed between the source and destination values
-    //  grROPOff        A value of 0, or 'OFF' is drawn to the destination
-    //  grROPOn         A value of 1, or 'ON' is drawn to the destination
+    //  grEpROPCopy       default Drawn pixel values are copied to the device screen
+    //  grEpROPNotCopy    A not operation is applied to the source value before copying to screen
+    //  grEpROPNot        A not operation is applied to the destination (screen) value
+    //  grEpROPXOR        A XOR operation is performed between the source and destination values
+    //  grEpROPOff        A value of 0, or 'OFF' is drawn to the destination
+    //  grEpROPOn         A value of 1, or 'ON' is drawn to the destination
 
     void setDrawMode(grEpRasterOp_t rop)
     {

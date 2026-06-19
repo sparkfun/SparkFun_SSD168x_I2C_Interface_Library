@@ -64,7 +64,7 @@ void setup()
     myDevice.text( startX + 0, startY + 56, "192.168.1.100", invertColors ? COLOR_OFF : COLOR_ON);
 
     // Add the WiFi3 icon
-    myDevice.setDrawMode( invertColors ? grROPNotCopy : grROPCopy );
+    myDevice.setDrawMode( invertColors ? grEpROPNotCopy : grEpROPCopy );
     myDevice.bitmap( startX + 34, startY + 0, (uint8_t *)WiFi_Symbol_3, WiFi_Symbol_Width, WiFi_Symbol_Height );
 
     // More icons
@@ -92,7 +92,7 @@ void loop()
     // Add the SIV and HPA
     
     if (invertColors)
-        myDevice.setDrawMode( invertColors ? grROPCopy : grROPNotCopy );
+        myDevice.setDrawMode( invertColors ? grEpROPCopy : grEpROPNotCopy );
 
     myDevice.setFont(QW_EP_FONT_8X16);
 
@@ -108,7 +108,7 @@ void loop()
         myDevice.rectangleFill( startX + 74, startY + 0, DownloadArrow_Width, DownloadArrow_Height, invertColors ? COLOR_ON : COLOR_OFF );
 
     if (invertColors)
-        myDevice.setDrawMode( invertColors ? grROPNotCopy : grROPCopy );
+        myDevice.setDrawMode( invertColors ? grEpROPNotCopy : grEpROPCopy );
 
     // Blink the DownloadArrow
     if (loopCount % 2 == 0)
