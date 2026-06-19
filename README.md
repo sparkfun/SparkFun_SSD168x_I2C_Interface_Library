@@ -20,12 +20,13 @@ The I2C to SPI Bridge is configured as a I2C peripheral with three registers: Co
 The MSP430FR2433 and STM32G03 folders contain example I2C-SPI Bridge firmware, tested on the:
 * TI MSP430FR2433 on the MSP-EXP430FR2433 dev board (using TI Code Composer Studio)
 * ST STM32G031K8T6 on the NUCLEO-G031K8 dev board (using the Arduino IDE and the STM32 Arduino Board package)
+* ST STM32G030F6P6 on a generic dev board (using the Arduino IDE and the STM32 Arduino Board package)
 
 Repository Contents
 -------------------
 
 * **/MSP430FR2433** - Example I2C-SPI Bridge firmware for the TI MSP430FR2433
-* **/STM32G03** - Example I2C-SPI Bridge firmware for the ST STM32G031K8T6
+* **/STM32G03** - Example I2C-SPI Bridge firmware for the ST STM32G030F6P6 and STM32G031K8T6
 * **/examples** - Example code 
 * **/src** - Source code
 
