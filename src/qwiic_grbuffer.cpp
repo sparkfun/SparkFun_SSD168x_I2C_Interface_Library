@@ -570,9 +570,16 @@ void QwEpGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint
     if (!slen) // empty string?
         return;
 
+    uint8_t finalRowHeight = kByteNBits; // Most fonts are multiples of 8 pixels high, but not 10x20
+
     uint8_t nRows = m_currentFont->height / kByteNBits;
-    if (!nRows)
+    if (!nRows) // nRows will be zero for the 5x7 font
         nRows = 1;
+    else if (m_currentFont->height % kByteNBits > 0) // Check for non-modulo-8 height
+    {
+        finalRowHeight = m_currentFont->height % kByteNBits;
+        nRows += 1; // For the 10x20 font, we have three rows
+    }
 
     // 5x7 font is special - need to add a margin
     uint8_t margin5x7 = (nRows == 1); // For the 5x7 font
@@ -621,7 +628,7 @@ void QwEpGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint
                 currChar = pgm_read_byte(pFont + fontIndex + i + (row * m_currentFont->map_width));
 
                 // draw bits
-                for (j = 0; j < kByteNBits; j++)
+                for (j = 0; j < (row == (nRows - 1) ? finalRowHeight : kByteNBits); j++)
                     if (currChar & text_byte_bits[j])
                         (*m_idraw.drawPixel)(this, x0 + i, y0 + j + rowOffset, clr);
 
