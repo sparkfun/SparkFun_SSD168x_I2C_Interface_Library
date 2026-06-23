@@ -20,7 +20,7 @@
 SSD1681I2C200x200 myDevice;
 
 // Fonts
-#include <res/qw_fnt_largenum.h>
+#include <res/qw_ep_fnt_largenum.h>
 
 // Static char array to hold the previous time
 // Load the previous time with zeros for the background / basemap for partial updates

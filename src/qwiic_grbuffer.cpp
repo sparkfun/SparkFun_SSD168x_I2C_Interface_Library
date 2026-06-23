@@ -49,7 +49,7 @@
 #include <string.h>
 
 // default font
-#include "res/qw_fnt_5x7.h"
+#include "res/qw_ep_fnt_5x7.h"
 
 ////////////////////////////////////////////////////////////////////////////////////
 // vTable/IDraw Interface Routines

@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwBMPSparkFun final : public bmpEpSingleton<QwBMPSparkFun> {
+class QwEpBMPSparkFun final : public bmpEpSingleton<QwEpBMPSparkFun> {
 
 public:
     const uint8_t* data(void)
@@ -39,10 +39,10 @@ public:
         return bmp_sparkfun_data;
     }
 
-    QwBMPSparkFun()
-        : bmpEpSingleton<QwBMPSparkFun>(BMP_SPARKFUN_WIDTH, BMP_SPARKFUN_HEIGHT)
+    QwEpBMPSparkFun()
+        : bmpEpSingleton<QwEpBMPSparkFun>(BMP_SPARKFUN_WIDTH, BMP_SPARKFUN_HEIGHT)
     {
     }
 };
 
-#define QW_EP_BMP_SPARKFUN QwBMPSparkFun::instance()
+#define QW_EP_BMP_SPARKFUN QwEpBMPSparkFun::instance()

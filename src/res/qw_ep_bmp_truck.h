@@ -28,7 +28,7 @@
 
 #include "qwiic_resdef.h"
 
-class QwBMPTruck final : public bmpEpSingleton<QwBMPTruck> {
+class QwEpBMPTruck final : public bmpEpSingleton<QwEpBMPTruck> {
 
 public:
     const uint8_t* data(void)
@@ -40,9 +40,9 @@ public:
     }
 
     QwBMPTruck()
-        : bmpEpSingleton<QwBMPTruck>(BMP_TRUCK_WIDTH, BMP_TRUCK_HEIGHT)
+        : bmpEpSingleton<QwEpBMPTruck>(BMP_TRUCK_WIDTH, BMP_TRUCK_HEIGHT)
     {
     }
 };
 
-#define QW_EP_BMP_TRUCK QwBMPTruck::instance()
+#define QW_EP_BMP_TRUCK QwEpBMPTruck::instance()

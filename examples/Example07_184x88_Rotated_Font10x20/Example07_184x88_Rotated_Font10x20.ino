@@ -20,7 +20,7 @@
 SSD1680I2C184x88Rotated myDevice;
 
 // Fonts
-#include <res/qw_fnt_10x20.h>
+#include <res/qw_ep_fnt_10x20.h>
 
 void setup()
 {
