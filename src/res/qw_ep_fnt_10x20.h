@@ -52,4 +52,4 @@ public:
     }
 };
 
-#define QW_EP_FONT_10x20 QwEpFont10x20::instance()
+#define QW_EP_FONT_10X20 QwEpFont10x20::instance()
