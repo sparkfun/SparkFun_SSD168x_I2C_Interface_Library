@@ -42,7 +42,7 @@ void setup()
     Serial.println("Begin success");
 
     // Display our text
-    myDevice.setFont(QW_EP_FONT_10x20);
+    myDevice.setFont(QW_EP_FONT_10X20);
     myDevice.text(0,  0, "0123456789ABCDEFGH");
     myDevice.text(0, 20, "IJKLMNOPQRSTUVWXYZ");
     myDevice.text(0, 40, "!#$%&()*+-abcdefgh");
