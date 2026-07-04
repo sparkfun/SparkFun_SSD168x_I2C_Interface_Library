@@ -16,8 +16,8 @@ Pin 7   PA0  e-paper D/C#
 Pin 8   PA1  e-paper BUSY
 Pin 9   PA2  e-paper RST
 Pin 12  PA5  SPI1 SCK  : Alternate Function 0 (AF0)
-Pin 13  PA6  SPI1 MISO : Alternate Function 0 (AF0) : not used
-Pin 14  PA7  SPI1 MOSI : Alternate Function 0 (AF0) : data to e-paper
+Pin 13  PA6  SPI1 POCI : Alternate Function 0 (AF0) : not used
+Pin 14  PA7  SPI1 PICO : Alternate Function 0 (AF0) : data to e-paper
 Pin 15  PB0  SPI CS / SS
 Pin 20  PB6  I2C1 SCL  : Alternate Function 6 (AF6)
 

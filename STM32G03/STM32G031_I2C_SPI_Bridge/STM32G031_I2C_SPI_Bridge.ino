@@ -15,8 +15,8 @@ D6  (PB0)  e-paper D/C#
 D7  (PB2)  e-paper BUSY
 D8  (PB8)  e-paper RST
 D10 (PB9)  SPI CS
-D11 (PB5)  SPI MOSI : data to e-paper
-D12 (PB4)  SPI MISO : not used
+D11 (PB5)  SPI PICO : data to e-paper
+D12 (PB4)  SPI POCI : not used
 D13 (PB3)  SPI SCK  : also LED_BUILTIN on the NUCLEO-G031K8 dev board
 
 This code emulates a single I2C peripheral (address 0x48, unshifted) with three 'registers':
@@ -82,8 +82,8 @@ void setup()
   Serial.println("D7  (PB2)  e-paper BUSY");
   Serial.println("D8  (PB8)  e-paper RST");
   Serial.println("D10 (PB9)  SPI CS");
-  Serial.println("D11 (PB5)  SPI MOSI : data to e-paper");
-  Serial.println("D12 (PB4)  SPI MISO : not used");
+  Serial.println("D11 (PB5)  SPI PICO : data to e-paper");
+  Serial.println("D12 (PB4)  SPI POCI : not used");
   Serial.println("D13 (PB3)  SPI SCK  : also LED_BUILTIN");
   Serial.flush();
 
