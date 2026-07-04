@@ -39,7 +39,7 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running OLED example");
+    Serial.println("Running SSD168x example");
 
     Wire.begin();
 
