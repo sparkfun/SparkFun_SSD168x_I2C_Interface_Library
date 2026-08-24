@@ -11,10 +11,14 @@ This library is based heavily on the [SparkFun Qwiic OLED Arduino Library](https
 
 It has been tested on the GoodDisplay GDEY0154D67 1.54" (200 x 200) and GDEM0097T61 0.97" (184 x 88) e-paper displays.
 
-The I2C to SPI Bridge is configured as a I2C peripheral with three registers: Control (Register 0x00), Data (Register 0x01) and Reset (Register 0x02).
-* All data written to Register 0x00 is bridged to SPI with the D/C# pin held low.
-* All data written to Register 0x01 is bridged to SPI with the D/C# pin held high.
-* A write to Register 0x02 causes RST to be pulled low briefly.
+The I2C to SPI Bridge is configured as a I2C peripheral with five registers:
+Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
+
+* A single control byte written to Register 0x00 is bridged to SPI with the D/C# pin held low. CS returns high after the write.
+* All data written to Register 0x01 is bridged to SPI with the D/C# pin held low. CS remains low after the write.
+* All data written to Register 0x02 is bridged to SPI with the D/C# pin held high. CS remains low after the write.
+* All data written to Register 0x03 is bridged to SPI with the D/C# pin held high. CS returns high after the write.
+* A write to Register 0x04 causes RST to be pulled low briefly.
 * I2C reads return bytes containing the e-paper BUSY flag in the LSB.
 
 The MSP430FR2433 and STM32G03 folders contain example I2C-SPI Bridge firmware, tested on the:

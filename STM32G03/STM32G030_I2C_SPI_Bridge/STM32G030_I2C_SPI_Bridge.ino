@@ -21,10 +21,12 @@ Pin 14  PA7  SPI1 PICO : Alternate Function 0 (AF0) : data to e-paper
 Pin 15  PB0  SPI CS / SS
 Pin 20  PB6  I2C1 SCL  : Alternate Function 6 (AF6)
 
-This code emulates a single I2C peripheral (address 0x48, unshifted) with three 'registers':
-Control (Register 0x00) : writes to this are bridged to SPI with the D/C# pin held low
-Data    (Register 0x01) : writes to this are bridged to SPI with the D/C# pin held high
-Reset   (Register 0x02) : writes to this generate a reset pulse on RST
+This code emulates a single I2C peripheral (address 0x48, unshifted) with five 'registers':
+Single Control (Register 0x00) : writes to this are bridged to SPI with the D/C# pin held low. CS returns high after the write.
+Control (Register 0x01) : writes to this are bridged to SPI with the D/C# pin held low. CS remains low after the write.
+Data    (Register 0x02) : writes to this are bridged to SPI with the D/C# pin held high. CS remains low after the write.
+Final Data (Register 0x03) : writes to this are bridged to SPI with the D/C# pin held high. CS returns high after the write.
+Reset   (Register 0x04) : writes to this generate a reset pulse on RST
 
 I2C reads from the peripheral return bytes containing the e-paper BUSY flag in the LSB
 
@@ -57,9 +59,11 @@ SPDX-License-Identifier: MIT
 #include <SPI.h>
 
 const uint8_t I2C_ADDR = 0x48;
-const uint8_t CONTROL_REG = 0x00;
-const uint8_t DATA_REG = 0x01;
-const uint8_t RESET_REG = 0x02;
+const uint8_t SINGLE_CONTROL_REG = 0x00;
+const uint8_t CONTROL_REG = 0x01;
+const uint8_t DATA_REG = 0x02;
+const uint8_t FINAL_DATA_REG = 0x03;
+const uint8_t RESET_REG = 0x04;
 const int DC = PA_0;
 const int BUSY = PA_1;
 const int RST = PA_2;
@@ -113,9 +117,9 @@ void loop()
 
   if (bytesToSend > 0)
   {
-    if (i2cBufferCopy[0] == CONTROL_REG)
+    if (i2cBufferCopy[0] == SINGLE_CONTROL_REG)
     {
-      if (bytesToSend > 1)
+      if (bytesToSend > 1) // Should only ever be == 1. Use > just in case
       {
         digitalWrite(DC, LOW);
         digitalWrite(CS, LOW);
@@ -124,7 +128,22 @@ void loop()
           SPI.transfer(i2cBufferCopy[i], SPI_TRANSMITONLY);
           bytesToSend--;
         }
-        digitalWrite(CS, HIGH);
+        digitalWrite(CS, HIGH); // Single control. CS returns high
+        digitalWrite(DC, HIGH);
+      }
+    }
+    else if (i2cBufferCopy[0] == CONTROL_REG)
+    {
+      if (bytesToSend > 1) // Should only ever be == 1. Use > just in case
+      {
+        digitalWrite(DC, LOW);
+        digitalWrite(CS, LOW);
+        for (uint8_t i = 1; bytesToSend > 1; i++)
+        {
+          SPI.transfer(i2cBufferCopy[i], SPI_TRANSMITONLY);
+          bytesToSend--;
+        }
+        // Leave CS low for the data bytes
         digitalWrite(DC, HIGH);
       }
     }
@@ -132,8 +151,22 @@ void loop()
     {
       if (bytesToSend > 1)
       {
-        digitalWrite(DC, HIGH);
-        digitalWrite(CS, LOW);
+        digitalWrite(DC, HIGH); // Ensure DC is high
+        digitalWrite(CS, LOW); // Ensure CS is low
+        for (uint8_t i = 1; bytesToSend > 1; i++)
+        {
+          SPI.transfer(i2cBufferCopy[i], SPI_TRANSMITONLY);
+          bytesToSend--;
+        }
+        // Leave CS low for additional data bytes
+      }
+    }
+    else if (i2cBufferCopy[0] == FINAL_DATA_REG)
+    {
+      if (bytesToSend > 1)
+      {
+        digitalWrite(DC, HIGH); // Ensure DC is high
+        digitalWrite(CS, LOW); // Ensure CS is low
         for (uint8_t i = 1; bytesToSend > 1; i++)
         {
           SPI.transfer(i2cBufferCopy[i], SPI_TRANSMITONLY);
@@ -144,6 +177,8 @@ void loop()
     }
     else if (i2cBufferCopy[0] == RESET_REG)
     {
+      digitalWrite(CS, HIGH); // Just in case
+      digitalWrite(DC, HIGH); // Just in case
       digitalWrite(RST, LOW);
       delayMicroseconds(100);
       digitalWrite(RST, HIGH);
