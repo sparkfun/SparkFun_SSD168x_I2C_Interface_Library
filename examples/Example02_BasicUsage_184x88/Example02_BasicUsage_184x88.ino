@@ -4,11 +4,13 @@
 //
 // This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
-// The I2C SPI Bridge is configured as a I2C peripheral with three registers: Control (Register 0x00),
-// Data (Register 0x01) and Reset (Register 0x02).
-// All data written to Register 0x00 is bridged to SPI with the D/C# pin held low.
-// All data written to Register 0x01 is bridged to SPI with the D/C# pin held high.
-// A write to Register 0x02 causes RST to be pulled low briefly.
+// The I2C SPI Bridge is configured as a I2C peripheral with five registers:
+// Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
+// A single control byte written to Register 0x00 is bridged to SPI with the D/C# pin held low. CS returns high after the write.
+// All data written to Register 0x01 is bridged to SPI with the D/C# pin held low. CS remains low after the write.
+// All data written to Register 0x02 is bridged to SPI with the D/C# pin held high. CS remains low after the write.
+// All data written to Register 0x03 is bridged to SPI with the D/C# pin held high. CS returns high after the write.
+// A write to Register 0x04 causes RST to be pulled low briefly.
 // I2C reads return bytes containing the e-paper BUSY flag in the LSB.
 //
 // SparkFun code, firmware, and software is released under the MIT License(http://opensource.org/licenses/MIT).
@@ -25,6 +27,48 @@ SSD1680I2C184x88 myDevice;
 // Bitmap
 #include <res/qw_ep_bmp_sparkfun.h>
 
+// Adjust these values according to your configuration
+//------------------------------------------------------------------------------
+
+// Pre-defined boards - comment / uncomment as needed:
+#define FACET_FP
+// #define POSTCARD
+// #define ESP32_THING_PLUS_C
+
+#ifdef  FACET_FP
+
+// https://www.sparkfun.com/sparkpnt-fp-no-gnss-receiver.html
+int pin_SDA = 15;
+int pin_SCL = 4;
+const char * platform = "SparkPNT FP";
+
+#else   // FACET_FP
+#ifdef  POSTCARD
+
+// https://www.sparkfun.com/sparkfun-rtk-postcard.html
+int pin_SDA = 7;
+int pin_SCL = 20;
+const char * platform = "SparkFun RTK Postcard";
+
+#else   // POSTCARD
+#ifdef ESP32_THING_PLUS_C
+
+// https://www.sparkfun.com/sparkfun-thing-plus-esp32-wroom-usb-c.html
+int pin_SDA = 21;
+int pin_SCL = 22;
+const char * platform = "SparkFun ESP32 Thing Plus C";
+
+#else  // ESP32_THING_PLUS_C
+
+// https://www.sparkfun.com/sparkfun-iot-redboard-esp32-development-board.html
+int pin_SDA = 21;
+int pin_SCL = 22;
+const char * platform = "SparkFun IoT Redboard";
+
+#endif  // ESP32_THING_PLUS_C
+#endif  // POSTCARD
+#endif  // FACET_FP
+
 void setup()
 {
     delay(1000);
@@ -33,7 +77,7 @@ void setup()
     Serial.begin(115200);
     Serial.println("Running SSD168x example");
 
-    Wire.begin();
+    Wire.begin(pin_SDA, pin_SCL);
 
     // Initalize the device and related graphics system
     if (myDevice.begin() == false)
@@ -60,7 +104,7 @@ void setup()
     myDevice.text(20, 76, "0123");
     myDevice.text(20, 124, "4567");
 
-    // There's nothing on the screen yet - Now send the graphics to the device
+    // There is nothing on the screen yet - Now send the graphics to the device
     myDevice.display();
 
     // Wait for display to update
