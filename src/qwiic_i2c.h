@@ -57,6 +57,9 @@ public:
     // Write a block of bytes to the device
     int writeRegisterRegion(uint8_t address, uint8_t offset, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms = 0);
 
+    // Write a block of bytes to the device using (e.g.) kDeviceSendData and kDeviceSendFinalData
+    int writeSplitRegisterRegion(uint8_t address, uint8_t offset1, uint8_t offset2, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms = 0);
+
     // Read a single byte from the device (from an unspecified 'register')
     uint8_t readRegisterByte(uint8_t address);
 
