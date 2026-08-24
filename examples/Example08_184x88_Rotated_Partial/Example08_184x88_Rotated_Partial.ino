@@ -29,8 +29,8 @@
 // This explains the weird display ghosts seen with partial updates
 // The Background / "Base Map" alternates between the BW and Red RAM on successive Partial updates
 //
-// The solution is to disable ping-pong mode using Command 0x37
-//
+// The solution could be to disable ping-pong mode using Command 0x37
+// but we have only had partial success with this, so far...
 //
 // SparkFun code, firmware, and software is released under the MIT License(http://opensource.org/licenses/MIT).
 //
@@ -141,7 +141,7 @@ void loop()
     }
 
     // Numbers 0 - 9
-    if (0) {
+    if (1) {
         // Erase the previous digit
         if ((digitCount == 0) && (loopCount == 0))
         {
@@ -186,7 +186,7 @@ void loop()
     }
 
     // Stripes
-    if (1) {
+    if (0) {
         // Erase the previous stripe
         if ((digitCount == 0) && (loopCount == 0))
         {
