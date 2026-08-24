@@ -104,11 +104,13 @@
 //
 // When communicating with the device, you either send commands or data. Define
 // our codes for these two options - these are basically i2c registers/offsets.
-// Note: these are specific to our MSP430FR2433 I2C-SPI Bridge
+// Note: these are specific to our I2C-SPI Bridge
 //
-#define kDeviceSendCommand 0x00
-#define kDeviceSendData 0x01
-#define kDeviceSendReset 0x02
+#define kDeviceSendSingleCommand 0x00
+#define kDeviceSendCommand 0x01
+#define kDeviceSendData 0x02
+#define kDeviceSendFinalData 0x03
+#define kDeviceSendReset 0x04
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Pixel write/set operations
@@ -223,18 +225,13 @@ bool I2cSsd1680::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
+    // setup e-paper device : do a reset and full init
+    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+
     if (clearDisplay)
     {
-        // setup e-paper device
-        setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
-
         // Init internal/drawing buffers and device screen buffer
         initBuffers(); // Note: calls clearScreenBuffer
-    }
-    else
-    {
-        // setup e-paper device and clear the device screen buffer
-        setupEpaperDevice(true);
     }
 
     return true;
@@ -307,6 +304,15 @@ void I2cSsd1680::setupEpaperDevice(bool clearBuffer)
     buffer[2] = 0;
     sendDevCommand( kCmdSsd1680DriverOutput, buffer, 3 );
 
+    // GoodDisplay GDEM0097T61
+    // Update the Display Option to disable Mode 2 ping-pong
+    // Display defaults:  0x00, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00
+    // Disable ping-pong: 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    //uint8_t displayOption[10] = { 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    // Mode 2, Disable ping-pong: 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00
+    //uint8_t displayOption[10] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00 };
+    //sendDevCommand(kCmdSsd1680DisplayOption, &displayOption[0], 10);
+
     // **Update in Y direction**, Y increment, X increment
     sendDevCommand(kCmdSsd1680DataEntryMode, 0x07);
 
@@ -357,19 +363,15 @@ void I2cSsd1680::clearScreenBuffer(void)
     {
         setScreenBufferAddress(i, 0, m_viewport.height - 1); // start of page
 
-        sendDevCommand(kCmdSsd1680WriteRamBW);
-
-        sendDevData((uint8_t *)emptyPage, m_viewport.height); // clear out page
+        sendDevCommand(kCmdSsd1680WriteRamBW, (uint8_t *)emptyPage, m_viewport.height); // clear out page
 
         delay(1);
 
         // Repeat for Red RAM - used as the background / base map for partial updates
         
-        setScreenBufferAddress(i, 0, m_viewport.height - 1);                // start of page
+        setScreenBufferAddress(i, 0, m_viewport.height - 1); // start of page
 
-        sendDevCommand(kCmdSsd1680WriteRamRed);
-
-        sendDevData((uint8_t *)emptyPage, m_viewport.height); // clear out page
+        sendDevCommand(kCmdSsd1680WriteRamRed, (uint8_t *)emptyPage, m_viewport.height); // clear out page
 
         delay(1);
     }
@@ -505,9 +507,9 @@ void I2cSsd1680::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
         return; // out of bounds
 
     uint8_t bit = gfx_byte_bits[mod_byte(x)];
-
-    m_rasterOps[m_rop](m_pBuffer + y + x / kByteNBits * m_viewport.height, // pixel offset
-                       (clr == COLOR_ON ? bit : 0), bit);                  // which bit to set in byte
+    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
+    curROP(m_pBuffer + y + x / kByteNBits * m_viewport.height, // pixel offset
+                       (clr == COLOR_ON ? bit : 0), bit);      // which bit to set / clear in byte
 
     pageCheckBounds(m_pageState[x / kByteNBits],
                     y); // update dirty range for page
@@ -781,10 +783,8 @@ void I2cSsd1680::display(bool partial, bool background)
         // buffer
         setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-        sendDevCommand(kCmdSsd1680WriteRamBW);
-
         // send the dirty data to the device
-        sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+        sendDevCommand(kCmdSsd1680WriteRamBW, m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(1); // Wait for I2C->SPI at 1MHz
@@ -798,10 +798,8 @@ void I2cSsd1680::display(bool partial, bool background)
             // buffer
             setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-            sendDevCommand(kCmdSsd1680WriteRamRed);
-
             // send the dirty data to the device
-            sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+            sendDevCommand(kCmdSsd1680WriteRamRed, m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
                         transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
             delay(1); // Wait for I2C->SPI at 1MHz
@@ -836,7 +834,7 @@ void I2cSsd1680::display(bool partial, bool background)
 
 void I2cSsd1680::sendDevCommand(uint8_t command)
 {
-    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
+    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendSingleCommand, command);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -862,20 +860,7 @@ void I2cSsd1680::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_valu
         return;
 
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, values, n_values);
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// sendDeviceData()
-//
-// send multiple data bytes to the device via the current bus object
-
-void I2cSsd1680::sendDevData(uint8_t *pData, uint8_t nData)
-{
-    if (!pData || nData == 0)
-        return;
-
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, pData, nData, 2);
+    m_i2cBus->writeSplitRegisterRegion(m_i2cAddress, kDeviceSendData, kDeviceSendFinalData, values, n_values);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

@@ -211,8 +211,8 @@ class QwEpGrBufferDevice : protected _QwEpIDraw
 
     void pixel(uint8_t x, uint8_t y, uint8_t clr = COLOR_ON);
 
-    void rectangle(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON);
-    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr = COLOR_ON);
+    void rectangle(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_ON);
+    void rectangleFill(uint8_t x0, uint8_t y0, uint8_t width, uint8_t height, uint8_t clr = COLOR_ON);
 
     void bitmap(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *pBitmap, uint8_t bmp_width,
                 uint8_t bmp_height);

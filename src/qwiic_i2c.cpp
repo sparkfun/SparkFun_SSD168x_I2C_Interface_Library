@@ -141,16 +141,85 @@ int QwEpI2C::writeRegisterRegion(uint8_t i2c_address, uint8_t offset, uint8_t* d
         data += nSent; // move up to remaining data in buffer
 
 #if defined(ARDUINO_ARCH_ESP32)
-     // if we are on ESP32, release bus no matter what
-     if (m_i2cPort->endTransmission())
+        // if we are on ESP32, release bus no matter what
+        if (m_i2cPort->endTransmission())
 #else
         // only release bus if we've sent all data
-     if (m_i2cPort->endTransmission(nRemaining <= 0))
+        if (m_i2cPort->endTransmission(nRemaining <= 0))
 #endif
             return -1; // the client didn't ACK
     
-        if (nRemaining > 0)
+        //if (nRemaining > 0)
+        delay(chunkDelay_ms);
+    }
+
+    return length - nRemaining;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// writeSplitRegisterRegion()
+//
+// Write a block of bytes to the device using (e.g.) kDeviceSendData and kDeviceSendFinalData
+// This routine will chunk over the data if needed
+// If length is 0, bail
+// If length <= kChunkSize
+//    All bytes are written to offset2
+// If length > kChunkSize
+//    Chunk(s) are written to offset 1
+//    The final chunk is written to offset 2
+
+int QwEpI2C::writeSplitRegisterRegion(uint8_t i2c_address, uint8_t offset1, uint8_t offset2, uint8_t* data, uint16_t length, unsigned long chunkDelay_ms)
+{
+    if (length == 0)
+        return 0;
+
+    uint16_t nSent;
+    uint16_t nRemaining = length;
+    uint16_t nToWrite;
+
+    if (length <= kChunkSize) { // kChunkSize is kMaxTransferBuffer - 1
+
+        m_i2cPort->beginTransmission(i2c_address);
+        m_i2cPort->write(offset2); // Counts as part of the chunk
+
+        nToWrite = length;
+        nSent = m_i2cPort->write(data, nToWrite);
+
+        nRemaining -= nToWrite; // Note - use nToWrite, not nSent, or lock on esp32
+        data += nSent; // move up to remaining data in buffer
+
+        m_i2cPort->endTransmission();
+    }
+    else { // length > kChunkSize
+        while (nRemaining > 0) {
+
+            m_i2cPort->beginTransmission(i2c_address);
+
+            nToWrite = (nRemaining > kChunkSize ? kChunkSize : nRemaining);
+
+            nRemaining -= nToWrite; // Note - use nToWrite, not nSent, or lock on esp32
+
+            if (nRemaining == 0)
+                m_i2cPort->write(offset2); // Use offset2 for the final write
+            else
+                m_i2cPort->write(offset1);
+
+            nSent = m_i2cPort->write(data, nToWrite);
+
+            data += nSent; // move up to remaining data in buffer
+
+#if defined(ARDUINO_ARCH_ESP32)
+            // if we are on ESP32, release bus no matter what
+            if (m_i2cPort->endTransmission())
+#else
+            // only release bus if we've sent all data
+            if (m_i2cPort->endTransmission(nRemaining <= 0))
+#endif
+                return -1; // the client didn't ACK
+        
+            //if (nRemaining > 0)
             delay(chunkDelay_ms);
+        }
     }
 
     return length - nRemaining;

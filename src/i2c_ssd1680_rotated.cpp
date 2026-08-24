@@ -54,7 +54,7 @@
 #define kPageMax 200 // outside bounds - high value - ** Strictly this should be 296 (16-bit)! **
 
 // clean/ no settings in the page
-#define pageIsClean(_page_) (_page_.min == kPageMax)
+#define pageIsClean(_page_) ((_page_.min == kPageMax) && (_page_.max == kPageMin))
 
 // Macro to reset page descriptor
 #define pageSetClean(_page_)                                                                                           \
@@ -104,11 +104,13 @@
 //
 // When communicating with the device, you either send commands or data. Define
 // our codes for these two options - these are basically i2c registers/offsets.
-// Note: these are specific to our MSP430FR2433 I2C-SPI Bridge
+// Note: these are specific to our I2C-SPI Bridge
 //
-#define kDeviceSendCommand 0x00
-#define kDeviceSendData 0x01
-#define kDeviceSendReset 0x02
+#define kDeviceSendSingleCommand 0x00
+#define kDeviceSendCommand 0x01
+#define kDeviceSendData 0x02
+#define kDeviceSendFinalData 0x03
+#define kDeviceSendReset 0x04
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Pixel write/set operations
@@ -224,18 +226,13 @@ bool I2cSsd1680Rotated::reset(bool clearDisplay)
     if (!m_isInitialized)
         return init();
 
+    // setup e-paper device : do a reset and full init
+    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+
     if (clearDisplay)
     {
-        // setup e-paper device
-        setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
-
         // Init internal/drawing buffers and device screen buffer
         initBuffers(); // Note: calls clearScreenBuffer
-    }
-    else
-    {
-        // setup e-paper device and clear the device screen buffer
-        setupEpaperDevice(true);
     }
 
     return true;
@@ -310,6 +307,15 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearBuffer)
     buffer[2] = 0;
     sendDevCommand( kCmdSsd1680DriverOutput, buffer, 3 );
 
+    // GoodDisplay GDEM0097T61
+    // Update the Display Option to disable Mode 2 ping-pong
+    // Display defaults:  0x00, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00
+    // Disable ping-pong: 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    //uint8_t displayOption[10] = { 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    // Mode 2, Disable ping-pong: 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00
+    //uint8_t displayOption[10] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00 };
+    //sendDevCommand(kCmdSsd1680DisplayOption, &displayOption[0], 10);
+
     // **Update in Y direction**, Y decrement, X increment
     sendDevCommand(kCmdSsd1680DataEntryMode, 0b00000101);
 
@@ -362,15 +368,15 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
 
         uint8_t buffer[4];
         
-        buffer[0] = i;
-        buffer[1] = i;
-        sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+        // buffer[0] = i;
+        // buffer[1] = i;
+        // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        buffer[0] = (m_viewport.width - 1) & 0xFF;
-        buffer[1] = (m_viewport.width - 1) >> 8;
-        buffer[2] = 0;
-        buffer[3] = 0;
-        sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+        // buffer[0] = (m_viewport.width - 1) & 0xFF;
+        // buffer[1] = (m_viewport.width - 1) >> 8;
+        // buffer[2] = 0;
+        // buffer[3] = 0;
+        // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
         buffer[0] = i;
         sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
@@ -380,22 +386,20 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         buffer[1] = (m_viewport.width - 1) >> 8;
         sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
-        sendDevCommand(kCmdSsd1680WriteRamBW);
-
-        sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
+        sendDevCommand(kCmdSsd1680WriteRamBW, (uint8_t *)emptyPage, m_viewport.width); // clear out page
         delay(1);
 
         // Repeat for Red RAM - used as the background / base map for partial updates
 
-        buffer[0] = i;
-        buffer[1] = i;
-        sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+        // buffer[0] = i;
+        // buffer[1] = i;
+        // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        buffer[0] = (m_viewport.width - 1) & 0xFF;
-        buffer[1] = (m_viewport.width - 1) >> 8;
-        buffer[2] = 0;
-        buffer[3] = 0;
-        sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+        // buffer[0] = (m_viewport.width - 1) & 0xFF;
+        // buffer[1] = (m_viewport.width - 1) >> 8;
+        // buffer[2] = 0;
+        // buffer[3] = 0;
+        // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
         buffer[0] = i;
         sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
@@ -405,9 +409,7 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
         buffer[1] = (m_viewport.width - 1) >> 8;
         sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
-        sendDevCommand(kCmdSsd1680WriteRamRed);
-
-        sendDevData((uint8_t *)emptyPage, m_viewport.width); // clear out page
+        sendDevCommand(kCmdSsd1680WriteRamRed, (uint8_t *)emptyPage, m_viewport.width); // clear out page
         delay(1);
     }
 }
@@ -544,9 +546,9 @@ void I2cSsd1680Rotated::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
         return; // out of bounds
 
     uint8_t bit = gfx_byte_bits[mod_byte(y)];
-
-    m_rasterOps[m_rop](m_pBuffer + x + y / kByteNBits * m_viewport.width, // pixel offset
-                       (clr == COLOR_ON ? bit : 0), bit);                  // which bit to set in byte
+    rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
+    curROP(m_pBuffer + x + y / kByteNBits * m_viewport.width, // pixel offset
+                       (clr == COLOR_ON ? bit : 0), bit);     // which bit to set / clear in byte
 
     pageCheckBounds(m_pageState[y / kByteNBits],
                     x); // update dirty range for page
@@ -715,8 +717,8 @@ void I2cSsd1680Rotated::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, ui
             uint8_t color = (theByte & bitMask) ? COLOR_ON : COLOR_OFF;
             drawPixel(x0 + x, y0 + y, color);
 
-            pageCheckBoundsRange(m_pageState[(x0 + x) / kByteNBits], y0,
-                                 y0 + dst_height - 1); // mark dirty range in page desc
+            pageCheckBoundsRange(m_pageState[(y0 + y) / kByteNBits], x0,
+                                 x0 + dst_width - 1); // mark dirty range in page desc
         }
     }
 }
@@ -746,15 +748,15 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t columnStart
 
     uint8_t buffer[4];
     
-    buffer[0] = page;
-    buffer[1] = page;
-    sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+    // buffer[0] = page;
+    // buffer[1] = page;
+    // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-    buffer[0] = (m_viewport.width - 1) - columnStart;
-    buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
-    buffer[2] = (m_viewport.width - 1) - columnEnd;
-    buffer[3] = ((m_viewport.width - 1) - columnEnd) >> 8; // 0 (column is uint8_t)
-    sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+    // buffer[0] = (m_viewport.width - 1) - columnStart;
+    // buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
+    // buffer[2] = (m_viewport.width - 1) - columnEnd;
+    // buffer[3] = ((m_viewport.width - 1) - columnEnd) >> 8; // 0 (column is uint8_t)
+    // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
     sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
@@ -812,7 +814,7 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
                                         // page were null
             continue;                   // next
 
-        if (partial || !displayReset)
+        if (!displayReset)
         {
             sendDevReset();
 
@@ -823,21 +825,22 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
             } while(isBusy());
 
             if (partial)
-                sendDevCommand( kCmdSsd1680WriteBorder, 0xC0 ); // HiZ
+                sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // HiZ
             else
-                sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1 (White)
+                sendDevCommand( kCmdSsd1680WriteBorder, 0x07 ); // Follow LUT3 (White)
 
             displayReset = true;
         }
 
         // set the start address to write the updated data to the devices screen
         // buffer
+        //Serial.printf("setScreenBufferAddress(%d, %d, %d)\r\n", i, transferRange.min, transferRange.max);
         setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-        sendDevCommand(kCmdSsd1680WriteRamBW);
-
         // send the dirty data to the device
-        sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
+        //Serial.printf("sendDevCommand(%d, %p, %d)\r\n", kCmdSsd1680WriteRamBW, m_pBuffer + (i * m_viewport.width) + transferRange.min,
+        //            transferRange.max - transferRange.min + 1);
+        sendDevCommand(kCmdSsd1680WriteRamBW, m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(1); // Wait for I2C->SPI at 1MHz
@@ -851,10 +854,8 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
             // buffer
             setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-            sendDevCommand(kCmdSsd1680WriteRamRed);
-
             // send the dirty data to the device
-            sendDevData(m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
+            sendDevCommand(kCmdSsd1680WriteRamRed, m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
                         transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
             delay(1); // Wait for I2C->SPI at 1MHz
@@ -890,7 +891,7 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
 
 void I2cSsd1680Rotated::sendDevCommand(uint8_t command)
 {
-    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
+    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendSingleCommand, command);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -902,13 +903,14 @@ void I2cSsd1680Rotated::sendDevCommand(uint8_t command)
 void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t value)
 {
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
-    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendData, value);
+    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendFinalData, value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 // sendDeviceCommand()
 //
 // send a single command and multiple values to the device via the current bus object.
+// split the write between the Data register and the Final Data register
 
 void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values)
 {
@@ -916,20 +918,7 @@ void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t *values, uint8_t
         return;
 
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, values, n_values);
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// sendDeviceData()
-//
-// send multiple data bytes to the device via the current bus object
-
-void I2cSsd1680Rotated::sendDevData(uint8_t *pData, uint8_t nData)
-{
-    if (!pData || nData == 0)
-        return;
-
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, pData, nData, 2);
+    m_i2cBus->writeSplitRegisterRegion(m_i2cAddress, kDeviceSendData, kDeviceSendFinalData, values, n_values);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
