@@ -196,7 +196,6 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     void sendDevCommand(uint8_t command);
     void sendDevCommand(uint8_t command, uint8_t value);
     void sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values);
-    void sendDevData(uint8_t *pData, uint8_t nData);
     void sendDevReset(void);
     uint8_t readDevStatus(void);
 

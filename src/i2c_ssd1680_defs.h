@@ -65,6 +65,7 @@
 #define kCmdSsd1680ReadUserID 0x2E
 #define kCmdSsd1680ReadStatus 0x2F
 #define kCmdSsd1680WriteLut 0x32
+#define kCmdSsd1680DisplayOption 0x37
 #define kCmdSsd1680WriteBorder 0x3C
 #define kCmdSsd1680SetRamPosX 0x44
 #define kCmdSsd1680SetRamPosY 0x45
@@ -101,11 +102,11 @@ const ssd1680InitCodeEntry ssd1680InitCode[] = {
   //{ kCmdSsd1680TempSensorWrite, 2, { 0x5A, 0 }, false, 0, false }, // 4-Gray
   //{ kCmdSsd1680DisplayUpdateCtrl2, 1, { 0x91 }, false, 0, false }, // Load temperature value
   //{ kCmdSsd1680MasterActivate, 0, { 0 }, true, 10, true }, // Display update sequence
-  { kCmdSsd1680WriteBorder, 1, { 0x05 }, false, 0, false }, // Follow LUT1 (White)
+  { kCmdSsd1680WriteBorder, 1, { 0x07 }, false, 0, false }, // Follow LUT3 (White)
   { kCmdSsd1680SetRamCounterX, 1, { 0 }, false, 0, false },
   { kCmdSsd1680SetRamCounterY, 2, { 0, 0 }, false, 0, false },
   { kCmdSsd1680DisplayUpdateCtrl1, 2, { 0x88, 0x80 }, false, 0, false }, // **Inverted** Red RAM, **Inverted** BW RAM content, S8-167
-  { kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0, false }, // VCOM -0.2
+  //{ kCmdSsd1680WriteVcom, 1, { 0x08 }, false, 0, false }, // VCOM -0.2
   //{ kCmdSsd1680WriteVcom, 1, { 0x36 }, false, 0, false }, // VCOM -1.35
   //{ kCmdSsd1680GateDrivingVoltage, 1, { 0x17 }, false, 0, false }, // VGH 20
   //{ kCmdSsd1680SourceDrivingVoltage, 3, { 0x41, 0xAC, 0x32 }, false, 0, false }, // VSH1 15V, VSH2 5.4V, VSL -15V

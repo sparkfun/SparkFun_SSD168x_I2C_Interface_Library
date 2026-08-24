@@ -103,11 +103,13 @@
 //
 // When communicating with the device, you either send commands or data. Define
 // our codes for these two options - these are basically i2c registers/offsets.
-// Note: these are specific to our MSP430FR2433 I2C-SPI Bridge
+// Note: these are specific to our I2C-SPI Bridge
 //
-#define kDeviceSendCommand 0x00
-#define kDeviceSendData 0x01
-#define kDeviceSendReset 0x02
+#define kDeviceSendSingleCommand 0x00
+#define kDeviceSendCommand 0x01
+#define kDeviceSendData 0x02
+#define kDeviceSendFinalData 0x03
+#define kDeviceSendReset 0x04
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Pixel write/set operations
@@ -356,9 +358,7 @@ void I2cSsd1681::clearScreenBuffer(void)
     {
         setScreenBufferAddress(i, 0, kPageMax); // start of page
 
-        sendDevCommand(kCmdSsd1681WriteRamBW);
-
-        sendDevData((uint8_t *)emptyPage, kPageMax); // clear out page
+        sendDevCommand(kCmdSsd1681WriteRamBW, (uint8_t *)emptyPage, kPageMax); // clear out page
 
         delay(1);
 
@@ -366,9 +366,7 @@ void I2cSsd1681::clearScreenBuffer(void)
         
         setScreenBufferAddress(i, 0, kPageMax); // start of page
 
-        sendDevCommand(kCmdSsd1681WriteRamRed);
-
-        sendDevData((uint8_t *)emptyPage, kPageMax); // clear out page
+        sendDevCommand(kCmdSsd1681WriteRamRed, (uint8_t *)emptyPage, kPageMax); // clear out page
 
         delay(1);
     }
@@ -514,7 +512,7 @@ void I2cSsd1681::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_line_vert()
 //
-// Fast horizontal line drawing routine
+// Fast vertical line drawing routine
 //
 
 void I2cSsd1681::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
@@ -780,10 +778,8 @@ void I2cSsd1681::display(bool partial, bool background)
         // buffer
         setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-        sendDevCommand(kCmdSsd1681WriteRamBW);
-
         // send the dirty data to the device
-        sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+        sendDevCommand(kCmdSsd1681WriteRamBW, m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
                     transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
         delay(1); // Wait for I2C->SPI at 1MHz
@@ -797,10 +793,8 @@ void I2cSsd1681::display(bool partial, bool background)
             // buffer
             setScreenBufferAddress(i, transferRange.min, transferRange.max);
 
-            sendDevCommand(kCmdSsd1681WriteRamRed);
-
             // send the dirty data to the device
-            sendDevData(m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+            sendDevCommand(kCmdSsd1681WriteRamRed, m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
                         transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
             delay(1); // Wait for I2C->SPI at 1MHz
@@ -835,7 +829,7 @@ void I2cSsd1681::display(bool partial, bool background)
 
 void I2cSsd1681::sendDevCommand(uint8_t command)
 {
-    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
+    m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendSingleCommand, command);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -861,20 +855,7 @@ void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_valu
         return;
 
     m_i2cBus->writeRegisterByte(m_i2cAddress, kDeviceSendCommand, command);
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, values, n_values);
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// sendDeviceData()
-//
-// send multiple data bytes to the device via the current bus object
-
-void I2cSsd1681::sendDevData(uint8_t *pData, uint8_t nData)
-{
-    if (!pData || nData == 0)
-        return;
-
-    m_i2cBus->writeRegisterRegion(m_i2cAddress, kDeviceSendData, pData, nData, 2);
+    m_i2cBus->writeSplitRegisterRegion(m_i2cAddress, kDeviceSendData, kDeviceSendFinalData, values, n_values);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
