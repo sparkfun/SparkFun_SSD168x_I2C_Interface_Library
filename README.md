@@ -2,7 +2,7 @@
 ========================================
 
 <table class="table table-hover table-striped table-bordered">
-    <p> TODO: Add product photos and links </p>
+    <p> ![Thing Plus USB-C demo](./img/demo.gif "Thing Plus USB-C demo") </p>
 </table>
 
 A library to support SSD1680/1 e-paper displays on I2C, using a I2C-SPI Bridge.
@@ -25,6 +25,17 @@ The MSP430FR2433 and STM32G03 folders contain example I2C-SPI Bridge firmware, t
 * TI MSP430FR2433 on the MSP-EXP430FR2433 dev board (using TI Code Composer Studio)
 * ST STM32G031K8T6 on the NUCLEO-G031K8 dev board (using the Arduino IDE and the STM32 Arduino Board package)
 * ST STM32G030F6P6 on a generic dev board (using the Arduino IDE and the STM32 Arduino Board package)
+
+In the above demo animated gif, the hardware is:
+* [SparkFun Thing Plus - ESP32 WROOM (USB-C)](https://www.sparkfun.com/sparkfun-thing-plus-esp32-wroom-usb-c.html)
+    * Running [Example04_184x88_Rotated_Clock](https://github.com/sparkfun/SparkFun_SSD168x_I2C_Interface_Library/blob/main/examples/Example04_184x88_Rotated_Clock/Example04_184x88_Rotated_Clock.ino)
+    * Connected via Qwiic (Wire) to:
+* A generic "STM32G030F6P6 Mini Development System Board" - available from online retailers
+    * Running the [STM32G030_I2C_SPI_Bridge](https://github.com/sparkfun/SparkFun_SSD168x_I2C_Interface_Library/tree/main/STM32G03/STM32G030_I2C_SPI_Bridge)
+    * Programmed using an ST-Link V2 programmer and STM32CubeProgrammer software
+* The [GoodDisplay DESPI-C02-CV0097 0.97 inch e-paper 24-Pin to 18 18-Pin adapter board](https://www.good-display.com/product/519.html)
+    * Set the sense resistance switch to 2.2 Ohm
+* The [GoodDisplay GDEM0097T61 0.97 inch e-paper display](https://www.good-display.com/product/486.html)
 
 Repository Contents
 -------------------
