@@ -32,6 +32,7 @@ Connect the SparkFun Thing Plus - ESP32 WROOM (USB-C) to the STM32G030 dev board
 Connect the STM32G030 dev board to the GoodDisplay DESPI-C02 as follows:
 
 | STM32G030 Dev Board | DESPI-C02 |
+|---|---|
 | 3V3 | 3.3V |
 | GND | GND |
 | A7 (PICO) | SDI |
