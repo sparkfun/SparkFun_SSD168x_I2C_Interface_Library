@@ -2,7 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -21,16 +21,14 @@
 // VCOM Register (Command 0x2C):               0x00
 // Display Mode (Command 0x37, Bytes B-F):     0x00 0x01 0x00 0x00 0x40
 // Waveform version (Command 0x37, Bytes G-J): 0x00 0x00 0x00 0x00
-// Mode 2 ping-pong is enabled
+//
+// Mode 2 ping-pong is enabled: bit F[6] is set
 //
 // Command 0x2E (Read SSD1680 User ID) returns: 0xCA 0xFE 0x00 0x16 0x80 0x00 0x55 0x01 0x00 0xDB
 //
-// Mode 2 ping-pong being enabled is a bit of a surprise, since it should default to disabled
-// This explains the weird display ghosts seen with partial updates
-// The Background / "Base Map" alternates between the BW and Red RAM on successive Partial updates
-//
-// The solution could be to disable ping-pong mode using Command 0x37
-// but we have only had partial success with this, so far...
+// The ping-pong causes some unexpected results with partial updates
+// If we want to move or scroll a digit by: erasing it with a single space; and adding the digit at a new position
+// We need to perform the erase-and-add twice, so that both ahlves of the SSD1680 RAM are updated
 //
 // SparkFun code, firmware, and software is released under the MIT License(http://opensource.org/licenses/MIT).
 //
@@ -43,24 +41,28 @@ SSD1680I2C184x88Rotated myDevice;
 // Fonts
 #include <res/qw_ep_fnt_largenum.h> // 12x48
 
-// Define the start coordinates for displaying the time
+// Define the start coordinates for displaying the digits
 const int xStart = 27;
 const int yStart = 20;
 
 // Change this to invert the colors
+// The ghosting from the partial updates is more evident when inverted
 const bool invertColors = false;
+
+// Change this to false to display stripes instead of digits
+const bool displayDigits = true;
 
 const int numDigits = 11; // Print 0123456789: using partial updates
 const int numLoops = 3; // Print digits this many times before doing a full refresh
-const int numWrites = 5; // Write each partial update this many times
+const int numWrites = 2; // Write each partial update this many times - compensate for the ping-pong
 
 // Adjust these values according to your configuration
 //------------------------------------------------------------------------------
 
 // Pre-defined boards - comment / uncomment as needed:
-#define FACET_FP
-// #define POSTCARD
-// #define ESP32_THING_PLUS_C
+//#define FACET_FP
+//#define POSTCARD
+#define ESP32_THING_PLUS_C
 
 #ifdef  FACET_FP
 
@@ -102,7 +104,7 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running SSD168x example");
+    Serial.printf("Running SSD168x example on %s\r\n", platform);
 
     Wire.begin(pin_SDA, pin_SCL);
 
@@ -125,14 +127,11 @@ void loop()
 
     if ((digitCount == 0) && (loopCount == 0))
     {
-        // Erase both BW and Red pixel memories
-        //myDevice.reset(true);
-
         // Fill the whole screen
         myDevice.rectangleFill(0, 0, myDevice.getWidth(), myDevice.getHeight(), invertColors ? COLOR_ON : COLOR_OFF);
 
         // Send the graphics to the device and also set the background for partial updates
-        myDevice.displayBackground();
+        myDevice.display();
 
         // Wait for display to update
         do {
@@ -140,43 +139,35 @@ void loop()
         } while (myDevice.isBusy());
     }
 
-    // Numbers 0 - 9
-    if (1) {
-        // Erase the previous digit
-        if ((digitCount == 0) && (loopCount == 0))
+    // Digits 0123456789:
+    if (displayDigits)
+    {
+        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
         {
-            // Nothing to do
-        }
-        else
-        {
-            int i = digitCount - 1;
-            if (i < 0)
-                i = numDigits - 1;
+            // Erase the previous digit
+            if ((digitCount == 0) && (loopCount == 0))
+            {
+                // Nothing to do
+            }
+            else
+            {
+                int i = digitCount - 1;
+                if (i < 0)
+                    i = numDigits - 1;
+    
+                myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
+                                       FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT,
+                                       invertColors ? COLOR_ON : COLOR_OFF);
+            }
 
-            myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
-                            FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
+            // Write the new digit
+            char newChar[2];
+            sprintf(newChar, "%c", '0' + digitCount);
+            myDevice.text(xStart + digitCount * FONT_LARGENUM_WIDTH, yStart, newChar,
+                          invertColors ? COLOR_OFF : COLOR_ON);
 
-            // for (int x = xStart + i * FONT_LARGENUM_WIDTH; x < xStart + i * FONT_LARGENUM_WIDTH + FONT_LARGENUM_WIDTH; x++)
-            //     for (int y = yStart; y < yStart + FONT_LARGENUM_HEIGHT; y++)
-            //         myDevice.pixel(x, y, invertColors ? COLOR_ON : COLOR_OFF);
-
-            // for (int y = yStart; y < yStart + FONT_LARGENUM_HEIGHT; y++)
-            //     myDevice.line(xStart + i * FONT_LARGENUM_WIDTH, y, xStart + i * FONT_LARGENUM_WIDTH + FONT_LARGENUM_WIDTH, y, invertColors ? COLOR_ON : COLOR_OFF);
-
-            // for (int x = xStart + i * FONT_LARGENUM_WIDTH; x < xStart + i * FONT_LARGENUM_WIDTH + FONT_LARGENUM_WIDTH; x++)
-            //     myDevice.line(x, yStart, x, yStart + FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
-
-        }
-
-        // Write the new digit
-        char newChar[2];
-        sprintf(newChar, "%c", '0' + digitCount);
-        myDevice.text(xStart + digitCount * FONT_LARGENUM_WIDTH, yStart, newChar, invertColors ? COLOR_OFF : COLOR_ON);
-
-        for (int w = 0; w < numWrites; w++)
-        {
             // Partial update
-            myDevice.displayPartial();
+            myDevice.display(true);
 
             // Wait for display to update
             do {
@@ -185,29 +176,30 @@ void loop()
         }
     }
 
-    // Stripes
-    if (0) {
-        // Erase the previous stripe
-        if ((digitCount == 0) && (loopCount == 0))
+    // Stripes : 11 8-pixel stripes, matches the display width of 88 pixels in bytes
+    else
+    {
+        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
         {
-            // Nothing to do
-        }
-        else
-        {
-            int i = digitCount - 1;
-            if (i < 0)
-                i = numDigits - 1;
+            // Erase the previous stripe
+            if ((digitCount == 0) && (loopCount == 0))
+            {
+                // Nothing to do
+            }
+            else
+            {
+                int i = digitCount - 1;
+                if (i < 0)
+                    i = numDigits - 1;
+    
+                myDevice.rectangleFill(0, i * 8, 184, 8, invertColors ? COLOR_ON : COLOR_OFF);
+            }
 
-            myDevice.rectangleFill(0, i * 8, 184, 8, invertColors ? COLOR_ON : COLOR_OFF);
-        }
+            // Write the new stripe
+            myDevice.rectangleFill(0, digitCount * 8, 184, 8, invertColors ? COLOR_OFF : COLOR_ON);
 
-        // Write the new stripe
-        myDevice.rectangleFill(0, digitCount * 8, 184, 8, invertColors ? COLOR_OFF : COLOR_ON);
-
-        for (int w = 0; w < numWrites; w++)
-        {
             // Partial update
-            myDevice.displayPartial();
+            myDevice.display(true);
 
             // Wait for display to update
             do {
@@ -216,10 +208,7 @@ void loop()
         }
     }
 
-    // Put display into deep sleep
-    myDevice.deepSleep();
-
-    // Increment
+    // Increment the counters
     digitCount++;
     digitCount %= numDigits;
     if (digitCount == 0)
@@ -227,6 +216,9 @@ void loop()
         loopCount++;
         loopCount %= numLoops;
     }
+
+    // Put display into deep sleep - just to prove we can
+    myDevice.deepSleep();
 
     // Delay
     delay(1000);

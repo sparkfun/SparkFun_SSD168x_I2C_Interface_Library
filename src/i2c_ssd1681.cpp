@@ -201,13 +201,17 @@ bool I2cSsd1681::init(void)
     // Flag that we are initialized
     m_isInitialized = true;
 
-    // setup e-paper device - before initBuffers. Needs m_isInitialized
-    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+    // setup e-paper device - needs m_isInitialized
+    setupEpaperDevice(); // calls initBuffers which will call clearScreenBuffer
 
-    // Init internal/drawing buffers and device screen buffer
-    initBuffers(); // Note: calls clearScreenBuffer
+    // Perform a full update
+    display();
 
-    // setup the device and init the graphics buffers
+    do {
+        delay(10);
+    }
+    while (isBusy());
+
     return true;
 }
 
@@ -218,25 +222,23 @@ bool I2cSsd1681::init(void)
 //
 // Returns true on success, false on failure
 
-bool I2cSsd1681::reset(bool clearDisplay)
+bool I2cSsd1681::reset(void)
 {
     // If we are not in an init state, just call init
     if (!m_isInitialized)
         return init();
 
-    if (clearDisplay)
-    {
-        // setup e-paper device
-        setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+    // Init internal/drawing buffers and device screen buffer
+    initBuffers(); // Note: calls clearScreenBuffer
 
-        // Init internal/drawing buffers and device screen buffer
-        initBuffers(); // Note: calls clearScreenBuffer
-    }
-    else
-    {
-        // setup e-paper device and clear the device screen buffer
-        setupEpaperDevice(true);
-    }
+    // Perform a full update
+    display();
+
+    // User must check isBusy externally
+    // do {
+    //     delay(10);
+    // }
+    // while (isBusy());
 
     return true;
 }
@@ -258,7 +260,7 @@ bool I2cSsd1681::reset(bool clearDisplay)
 // Method sends the init/setup commands to the OLED device, placing
 // it in a state for use by this driver/library.
 
-void I2cSsd1681::setupEpaperDevice(bool clearBuffer)
+void I2cSsd1681::setupEpaperDevice(void)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
@@ -311,8 +313,7 @@ void I2cSsd1681::setupEpaperDevice(bool clearBuffer)
     // **Update in Y direction**, Y increment, X increment
     sendDevCommand(kCmdSsd1681DataEntryMode, 0x07);
 
-    if (clearBuffer)
-        clearScreenBuffer();
+    initBuffers(); // clear graphics and screen buffer
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // setCommBus()
@@ -728,13 +729,12 @@ bool I2cSsd1681::setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t 
 // new graphics to display, and any currently displayed items that need to be
 // erased.
 
-void I2cSsd1681::display(bool partial, bool background)
+void I2cSsd1681::display(bool partial)
 {
-    // If background is true, ensure partial is false
-    if (background)
-        partial = false;
+    // Sending only the dirty areas is probably OK because init calls clearScreenBuffer
+    // which clears both BW and Red RAM.
 
-    bool displayReset = false;
+    bool displayUpdated = false;
 
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
@@ -756,23 +756,19 @@ void I2cSsd1681::display(bool partial, bool background)
                                         // page were null
             continue;                   // next
 
-        if (partial || !displayReset)
-        {
-            sendDevReset();
+        // Perform hardware reset - GoodDisplay code always does this - not sure if it is strictly necessary?
+        sendDevReset(); // Hardware reset
 
+        do {
             delay(10);
-
-            do {
-                delay(1);
-            } while(isBusy());
-
-            if (partial)
-                sendDevCommand( kCmdSsd1681WriteBorder, 0x80 ); // VCOM
-            else
-                sendDevCommand( kCmdSsd1681WriteBorder, 0x05 ); // Follow LUT1 (White)
-
-            displayReset = true;
         }
+        while (isBusy());
+
+        // Set border - GoodDisplay code always does this
+        if (partial)
+            sendDevCommand( kCmdSsd1681WriteBorder, 0x80 ); // VCOM
+        else
+            sendDevCommand( kCmdSsd1681WriteBorder, 0x05 ); // Follow LUT1 (White)
 
         // set the start address to write the updated data to the devices screen
         // buffer
@@ -784,17 +780,15 @@ void I2cSsd1681::display(bool partial, bool background)
 
         delay(1); // Wait for I2C->SPI at 1MHz
 
-        // If background is true, write the same data to the Red RAM so the SSD1681 can
+        // If partial is not true, write the same data to the Red RAM so the SSD1680 can
         // diff it on the next partial write
 
-        if (background)
+        if (!partial)
         {
-            // set the start address to write the updated data to the devices screen
-            // buffer
-            setScreenBufferAddress(i, transferRange.min, transferRange.max);
+            // GoodDisplay only sets the RAM address and counters once...
 
             // send the dirty data to the device
-            sendDevCommand(kCmdSsd1681WriteRamRed, m_pBuffer + (i * m_viewport.height) + transferRange.min, // this page start + min
+            sendDevCommand(kCmdSsd1681WriteRamRed, m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
                         transferRange.max - transferRange.min + 1); // dirty region max - min. Add 1 b/c 0 based
 
             delay(1); // Wait for I2C->SPI at 1MHz
@@ -810,10 +804,13 @@ void I2cSsd1681::display(bool partial, bool background)
 
         // this page is no longer dirty - mark it  clean
         pageSetClean(m_pageState[i]);
+
+        displayUpdated = true;
     }
+
     m_pendingErase = false; // no longer pending
 
-    if (displayReset) // If some dirty pixels were sent, activate the display
+    if (!partial || displayUpdated) // If some dirty pixels were sent, activate the display
     {
         sendDevCommand( kCmdSsd1681DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
         sendDevCommand( kCmdSsd1681MasterActivate ); // Activate
@@ -849,7 +846,7 @@ void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t value)
 //
 // send a single command and multiple values to the device via the current bus object.
 
-void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values)
+void I2cSsd1681::sendDevCommand(uint8_t command, uint8_t *values, uint16_t n_values)
 {
     if (!values || n_values == 0)
         return;

@@ -2,7 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, June 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -28,9 +28,9 @@ SSD1680I2C184x88Rotated myDevice;
 //------------------------------------------------------------------------------
 
 // Pre-defined boards - comment / uncomment as needed:
-#define FACET_FP
-// #define POSTCARD
-// #define ESP32_THING_PLUS_C
+//#define FACET_FP
+//#define POSTCARD
+#define ESP32_THING_PLUS_C
 
 #ifdef  FACET_FP
 
@@ -72,7 +72,7 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running OLED example");
+    Serial.printf("Running SSD168x example on %s\r\n", platform);
 
     Wire.begin(pin_SDA, pin_SCL);
 

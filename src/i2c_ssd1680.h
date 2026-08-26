@@ -120,7 +120,7 @@ class I2cSsd1680 : public QwEpGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false, bool background = false); // send graphics buffer to the device screen buffer
+    void display(bool partial = false); // send graphics buffer to the device screen buffer
     void erase(void);
 
     // Device setup
@@ -130,7 +130,7 @@ class I2cSsd1680 : public QwEpGrBufferDevice
     {
         return m_isInitialized;
     };
-    bool reset(bool clearDisplay = true);
+    bool reset(void);
 
     // method to set the communication bus this object should use
     void setCommBus(QwEpI2C &theBus, uint8_t id_bus);
@@ -185,14 +185,14 @@ class I2cSsd1680 : public QwEpGrBufferDevice
     // Internal buffer management methods
     bool setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t rowEnd);
     void initBuffers(void); // clear graphics and screen buffer
-    void clearScreenBuffer(void);
+    void clearScreenBuffer(void); // clear screen buffer
     void resendGraphics(void);
-    void setupEpaperDevice(bool clearBuffer = true);
+    void setupEpaperDevice(void); // always calls initBuffers
 
     // device communication methods
     void sendDevCommand(uint8_t command);
     void sendDevCommand(uint8_t command, uint8_t value);
-    void sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values);
+    void sendDevCommand(uint8_t command, uint8_t *values, uint16_t n_values);
     void sendDevReset(void);
     uint8_t readDevStatus(void);
 

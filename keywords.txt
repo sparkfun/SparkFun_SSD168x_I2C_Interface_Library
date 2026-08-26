@@ -18,8 +18,6 @@ begin	KEYWORD2
 getWidth	KEYWORD2
 getHeight	KEYWORD2
 reset	KEYWORD2
-displayPartial	KEYWORD2
-displayBackground	KEYWORD2
 display	KEYWORD2
 erase	KEYWORD2
 deepSleep	KEYWORD2

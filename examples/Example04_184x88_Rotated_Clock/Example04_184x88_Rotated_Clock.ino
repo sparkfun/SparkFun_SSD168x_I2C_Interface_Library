@@ -2,7 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -39,9 +39,9 @@ const bool invertColors = false;
 //------------------------------------------------------------------------------
 
 // Pre-defined boards - comment / uncomment as needed:
-#define FACET_FP
-// #define POSTCARD
-// #define ESP32_THING_PLUS_C
+//#define FACET_FP
+//#define POSTCARD
+#define ESP32_THING_PLUS_C
 
 #ifdef  FACET_FP
 
@@ -83,7 +83,7 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running SSD168x example");
+    Serial.printf("Running SSD168x example on %s\r\n", platform);
 
     Wire.begin(pin_SDA, pin_SCL);
 
@@ -111,7 +111,7 @@ void setup()
 
     // There's nothing on the screen yet
     // Send the graphics to the device and also set the background for partial updates
-    myDevice.displayBackground();
+    myDevice.display();
 
     // Wait for display to update
     while (myDevice.isBusy())
@@ -134,7 +134,7 @@ void loop()
     // print into theTime
     sprintf(theTime, "%04d:%02d:%02d", hh, mm, ss);
 
-    // work out how many and which characters have changed
+    // Work out how many and which characters have changed
     int numCharsChanged = 0;
     bool charsChanged[strlen("HHHH:MM:SS")];
     for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
@@ -156,7 +156,7 @@ void loop()
         // for each character that has changed, erase it and update it
         for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
         {
-            if (charsChanged[i])
+            if (charsChanged[i]) // Comment this if statement to always update all the characters
             {
                 myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
                                 FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
@@ -166,16 +166,23 @@ void loop()
             }
         }
 
-        // if only 1 character has changed, do a partial update,
+        // If only 1 character has changed, do a partial update,
         // otherside do a full update and update the background
 
-        bool doPartial = numCharsChanged <= 1;
+        // Note: this only works because the partial update is changing a single digit.
+        //       The GDEM0097T61 has the SSD1680 ping-pong mode enabled.
+        //       You will see some very interesting things if you change the next line to:
+        //       bool partial = numCharsChanged <= 2;
+        //       The solution is to always overwrite all ten characters on each partial update.
+        //       If you change the next line to bool partial = numCharsChanged <= 2;
+        //       and comment line 159 ("//if (charsChanged[i])") above, everything works as expected.
 
-        //myDevice.display(doPartial, !doPartial);
-        if (doPartial)
-            myDevice.displayPartial();
-        else
-            myDevice.displayBackground();
+        bool partial = numCharsChanged <= 1;
+
+        if (!partial)
+            Serial.println("Performing full update");
+
+        myDevice.display(partial);
 
         // Wait for display to update
         do {

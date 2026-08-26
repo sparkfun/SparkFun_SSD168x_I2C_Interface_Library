@@ -2,7 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -39,9 +39,9 @@ const int startY = 12;
 //------------------------------------------------------------------------------
 
 // Pre-defined boards - comment / uncomment as needed:
-#define FACET_FP
-// #define POSTCARD
-// #define ESP32_THING_PLUS_C
+//#define FACET_FP
+//#define POSTCARD
+#define ESP32_THING_PLUS_C
 
 #ifdef  FACET_FP
 
@@ -83,10 +83,10 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running SSD168x example");
+    Serial.printf("Running SSD168x example on %s\r\n", platform);
 
     Wire.begin(pin_SDA, pin_SCL);
-    Wire.setClock(400000);
+    Wire.setClock(400000); // Increase I2C bus speed to 400kHz
 
     // Initalize the device and related graphics system
     if (myDevice.begin() == false)
@@ -120,7 +120,7 @@ void setup()
 
     // There's nothing on the screen yet
     // Send the graphics to the device and also set the background for partial updates
-    myDevice.displayBackground();
+    myDevice.display();
 
     // Wait for display to update
     while (myDevice.isBusy())
@@ -168,19 +168,16 @@ void loop()
     else // if (loopCount % 4 == 3)
         myDevice.bitmap( startX + 119, startY + 52, (uint8_t *)Logging_3, Logging_Width, Logging_Height );
 
-    bool doPartial = ((loopCount % fullUpdateEvery) != 0);
+    bool partial = ((loopCount % fullUpdateEvery) != 0);
 
-    //myDevice.display(doPartial, !doPartial);
-    if (doPartial)
-        myDevice.displayPartial();
-    else
-        myDevice.displayBackground();
+    myDevice.display(partial);
 
     // Wait for display to update
     do {
         delay(10); // Don't pound the I2C bus too hard
     } while (myDevice.isBusy());
 
+    // Put display into deep sleep
     myDevice.deepSleep();
 
     loopCount++;
