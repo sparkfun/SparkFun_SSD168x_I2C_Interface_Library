@@ -1,9 +1,6 @@
 # SparkFun SSD168x I2C Interface Library
-========================================
 
-<table class="table table-hover table-striped table-bordered">
-    <p> ![Thing Plus USB-C demo](./img/demo.gif "Thing Plus USB-C demo") </p>
-</table>
+![Thing Plus USB-C demo](./img/demo.gif "Thing Plus USB-C demo")
 
 A library to support SSD1680/1 e-paper displays on I2C, using a I2C-SPI Bridge.
 
