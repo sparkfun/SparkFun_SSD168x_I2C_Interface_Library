@@ -34,6 +34,8 @@ In the above demo animated gif, the hardware is:
     * Set the sense resistance switch to 2.2 Ohm
 * The [GoodDisplay GDEM0097T61 0.97 inch e-paper display](https://www.good-display.com/product/486.html)
 
+Please see [WIRING](./WIRING.md) for the connections
+
 Repository Contents
 -------------------
 
@@ -44,6 +46,7 @@ Repository Contents
 
 Documentation
 --------------
+* **[Wiring](./WIRING.md) - wiring for STM32 programming and display adapter connections
 * **[GitHub Repo](https://github.com/sparkfun/TODO)** - TODO: Update URL and description
 * **[Hookup Guide](http://docs.sparkfun.com/TODO/)** - TODO: Update URL and description
 
