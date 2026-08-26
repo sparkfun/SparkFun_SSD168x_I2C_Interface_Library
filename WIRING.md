@@ -44,3 +44,33 @@ Connect the STM32G030 dev board to the GoodDisplay DESPI-C02 as follows:
 
 Set the DESPI-C02 sense switch to 2.2 Ohm
 
+## Wiring for the ST NUCLEO-G031K8 board
+
+If you are using the ST NUCLEO-G031K8 (STM32G031) as the I2C to SPI Bridge, you need to use different connections and firmware:
+
+The NUCLEO-G031K8 has the ST-LINK programmer on-board. You don't need a separate ST-LINK V2 programmer. It also has a convenient micro-USB connector for power and programming.
+
+Use (e.g.) ST STM32CubeProgrammer to program the [STM32G031_I2C_SPI_Bridge.ino.GENERIC_G031K8TX.bin](https://github.com/sparkfun/SparkFun_SSD168x_I2C_Interface_Library/blob/main/STM32G03/STM32G031_I2C_SPI_Bridge/STM32G031_I2C_SPI_Bridge.ino.GENERIC_G031K8TX.bin) firmware onto the STM32, starting at address 0x8000000.
+
+Connect the NUCLEO-G031K8 dev board to the GoodDisplay DESPI-C02 as follows:
+
+| NUCLEO-G031K8 | DESPI-C02 |
+|---|---|
+| 3V3 | 3.3V |
+| GND | GND |
+| D11 (B5 / PICO) | SDI |
+| D13 (B3 / SCK) | SCK |
+| D10 (B9 / CS) | CS |
+| D6 (B0) | D/C |
+| D8 (B8) | RES |
+| D7 (B2) | BUSY |
+
+The Qwiic (I2C) connections are:
+
+| Qwiic | NUCLEO-G031K8 |
+|---|---|
+| Red 3V3 | 3V3 |
+| Black GND | GND |
+| Blue SDA | D4 (A10) |
+| Yellow SCL | D5 (A9) |
+
