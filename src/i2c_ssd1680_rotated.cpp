@@ -57,46 +57,46 @@
 #define pageIsClean(_page_) ((_page_.min == kPageMax) && (_page_.max == kPageMin))
 
 // Macro to reset page descriptor
-#define pageSetClean(_page_)                                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        _page_.min = kPageMax;                                                                                        \
-        _page_.max = kPageMin;                                                                                        \
+#define pageSetClean(_page_)                           \
+    do                                                 \
+    {                                                  \
+        _page_.min = kPageMax;                         \
+        _page_.max = kPageMin;                         \
     } while (false)
 
 // Macro to check and adjust record bounds based on a single location
 // The _c_ value must be within the screen (0 <= y < width), limit
 // values are ignored
-#define pageCheckBounds(_page_, _c_)                                                                                   \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_c_ < _page_.min)                                                                                         \
-            _page_.min = _c_;                                                                                         \
-        if (_c_ > _page_.max)                                                                                         \
-            _page_.max = _c_;                                                                                         \
+#define pageCheckBounds(_page_, _c_)                   \
+    do                                                 \
+    {                                                  \
+        if (_c_ < _page_.min)                          \
+            _page_.min = _c_;                          \
+        if (_c_ > _page_.max)                          \
+            _page_.max = _c_;                          \
     } while (false)
 
 // Macro to check and adjust record bounds using another page descriptor
 // The _page2_ y values must be within the screen (0 <= y < width), limit
 // values are ignored
-#define pageCheckBoundsDesc(_page_, _page2_)                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_page2_.min < _page_.min)                                                                                \
-            _page_.min = _page2_.min;                                                                                \
-        if (_page2_.max > _page_.max)                                                                                \
-            _page_.max = _page2_.max;                                                                                \
+#define pageCheckBoundsDesc(_page_, _page2_)           \
+    do                                                 \
+    {                                                  \
+        if (_page2_.min < _page_.min)                  \
+            _page_.min = _page2_.min;                  \
+        if (_page2_.max > _page_.max)                  \
+            _page_.max = _page2_.max;                  \
     } while (false)
 
 // Macro to check and adjust record bounds using bounds values
 // Values _c0_ and _c1_ must be within the screen (0 <= y < width)
-#define pageCheckBoundsRange(_page_, _c0_, _c1_)                                                                       \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_c0_ < _page_.min)                                                                                        \
-            _page_.min = _c0_;                                                                                        \
-        if (_c1_ > _page_.max)                                                                                        \
-            _page_.max = _c1_;                                                                                        \
+#define pageCheckBoundsRange(_page_, _c0_, _c1_)       \
+    do                                                 \
+    {                                                  \
+        if (_c0_ < _page_.min)                         \
+            _page_.min = _c0_;                         \
+        if (_c1_ > _page_.max)                         \
+            _page_.max = _c1_;                         \
     } while (false)
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -203,13 +203,17 @@ bool I2cSsd1680Rotated::init(void)
     // Flag that we are initialized
     m_isInitialized = true;
 
-    // setup e-paper device - before initBuffers. Needs m_isInitialized
-    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+    // setup e-paper device - needs m_isInitialized
+    setupEpaperDevice(); // calls initBuffers which will call clearScreenBuffer
 
-    // Init internal/drawing buffers and device screen buffer
-    initBuffers(); // Note: calls clearScreenBuffer
+    // Perform a full update
+    display();
 
-    // setup the device and init the graphics buffers
+    do {
+        delay(10);
+    }
+    while (isBusy());
+
     return true;
 }
 
@@ -220,20 +224,23 @@ bool I2cSsd1680Rotated::init(void)
 //
 // Returns true on success, false on failure
 
-bool I2cSsd1680Rotated::reset(bool clearDisplay)
+bool I2cSsd1680Rotated::reset(void)
 {
     // If we are not in an init state, just call init
     if (!m_isInitialized)
         return init();
 
-    // setup e-paper device : do a reset and full init
-    setupEpaperDevice(false); // initBuffers will call clearScreenBuffer
+    // Init internal/drawing buffers and device screen buffer
+    initBuffers(); // Note: calls clearScreenBuffer
 
-    if (clearDisplay)
-    {
-        // Init internal/drawing buffers and device screen buffer
-        initBuffers(); // Note: calls clearScreenBuffer
-    }
+    // Perform a full update
+    display();
+
+    // User must check isBusy externally
+    // do {
+    //     delay(10);
+    // }
+    // while (isBusy());
 
     return true;
 }
@@ -252,15 +259,17 @@ bool I2cSsd1680Rotated::reset(bool clearDisplay)
 ////////////////////////////////////////////////////////////////////////////////////
 // setupEpaperDevice()
 //
-// Method sends the init/setup commands to the OLED device, placing
+// PRIVATE
+//
+// Method sends the init/setup commands to the e-paper device, placing
 // it in a state for use by this driver/library.
 
-void I2cSsd1680Rotated::setupEpaperDevice(bool clearBuffer)
+void I2cSsd1680Rotated::setupEpaperDevice(void)
 {
     // Start the device setup - sending commands to device. See command defs in
     // header, and device datasheet
 
-    sendDevReset();
+    sendDevReset(); // Hardware reset
 
     do {
         delay(10);
@@ -309,18 +318,16 @@ void I2cSsd1680Rotated::setupEpaperDevice(bool clearBuffer)
 
     // GoodDisplay GDEM0097T61
     // Update the Display Option to disable Mode 2 ping-pong
+    // Careful! This needs a power cycle or an overwrite to restore
     // Display defaults:  0x00, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00
     // Disable ping-pong: 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     //uint8_t displayOption[10] = { 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    // Mode 2, Disable ping-pong: 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00
-    //uint8_t displayOption[10] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 0x00, 0x00, 0x00, 0x00 };
     //sendDevCommand(kCmdSsd1680DisplayOption, &displayOption[0], 10);
 
     // **Update in Y direction**, Y decrement, X increment
     sendDevCommand(kCmdSsd1680DataEntryMode, 0b00000101);
 
-    if (clearBuffer)
-        clearScreenBuffer();
+    initBuffers(); // clear graphics and screen buffer
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // setCommBus()
@@ -354,67 +361,61 @@ void I2cSsd1680Rotated::setBuffer(uint8_t *pBuffer)
 ////////////////////////////////////////////////////////////////////////////////////
 // clearScreenBuffer()
 //
+// PRIVATE
+//
 // Clear out all the on-device memory.
+//
+// The GoodDisplay code example:
+//  Sets the RAM X address start / end - for the full display
+//  Sets the RAM Y address start / end - for the full display
+//  Sets the RAM X counter
+//  Sets the RAM Y counter
+//  Writes all 184*88/8 = 2024 bytes to BW RAM
+//  Writes all 2024 bytes to RED RAM
+//  Note: the RAM address and counter are not re-set between the two writes
 //
 void I2cSsd1680Rotated::clearScreenBuffer(void)
 {
     // Clear out the **visible** screen buffer on the device
-    uint8_t emptyPage[m_viewport.width];
-    memset(emptyPage, COLOR_OFF, m_viewport.width); // OFF = 0. Becomes White due to inversion
+    uint8_t emptyBuffer[m_viewport.height * m_viewport.width / kByteNBits];
+    memset(emptyBuffer, COLOR_OFF, m_viewport.height * m_viewport.width / kByteNBits); // OFF = 0. Becomes White due to inversion
 
-    for (int i = 0; i < m_nPages; i++)
-    {
-        // We can't use setScreenBufferAddress here. We need to use real addresses
+    // We can't use setScreenBufferAddress here. We need to use real addresses
 
-        uint8_t buffer[4];
-        
-        // buffer[0] = i;
-        // buffer[1] = i;
-        // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+    uint8_t buffer[4];
+    
+    buffer[0] = 0;
+    buffer[1] = (m_viewport.height / 8) - 1;
+    sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-        // buffer[0] = (m_viewport.width - 1) & 0xFF;
-        // buffer[1] = (m_viewport.width - 1) >> 8;
-        // buffer[2] = 0;
-        // buffer[3] = 0;
-        // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+    // We are using Y decrement mode. Set Y to max, min
+    buffer[0] = (m_viewport.width - 1) & 0xFF;
+    buffer[1] = (m_viewport.width - 1) >> 8;
+    buffer[2] = 0;
+    buffer[3] = 0;
+    sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
-        buffer[0] = i;
-        sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
+    buffer[0] = 0;
+    sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
 
-        // We are using Y decrement mode. Set Y to the max
-        buffer[0] = (m_viewport.width - 1) & 0xFF;
-        buffer[1] = (m_viewport.width - 1) >> 8;
-        sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
+    // We are using Y decrement mode. Set Y to the max
+    buffer[0] = (m_viewport.width - 1) & 0xFF;
+    buffer[1] = (m_viewport.width - 1) >> 8;
+    sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
 
-        sendDevCommand(kCmdSsd1680WriteRamBW, (uint8_t *)emptyPage, m_viewport.width); // clear out page
-        delay(1);
+    // Clear BW RAM
+    sendDevCommand(kCmdSsd1680WriteRamBW, (uint8_t *)emptyBuffer, (uint16_t)m_viewport.height * (uint16_t)m_viewport.width / kByteNBits);
+    delay(1);
 
-        // Repeat for Red RAM - used as the background / base map for partial updates
-
-        // buffer[0] = i;
-        // buffer[1] = i;
-        // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
-
-        // buffer[0] = (m_viewport.width - 1) & 0xFF;
-        // buffer[1] = (m_viewport.width - 1) >> 8;
-        // buffer[2] = 0;
-        // buffer[3] = 0;
-        // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
-
-        buffer[0] = i;
-        sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
-
-        // We are using Y decrement mode. Set Y to the max
-        buffer[0] = (m_viewport.width - 1) & 0xFF;
-        buffer[1] = (m_viewport.width - 1) >> 8;
-        sendDevCommand( kCmdSsd1680SetRamCounterY, buffer, 2 );
-
-        sendDevCommand(kCmdSsd1680WriteRamRed, (uint8_t *)emptyPage, m_viewport.width); // clear out page
-        delay(1);
-    }
+    // Clear RED RAM
+    sendDevCommand(kCmdSsd1680WriteRamRed, (uint8_t *)emptyBuffer, (uint16_t)m_viewport.height * (uint16_t)m_viewport.width / kByteNBits);
+    delay(1);
 }
+
 ////////////////////////////////////////////////////////////////////////////////////
 // initBuffers()
+//
+// PRIVATE
 //
 // Will clear the local graphics buffer, and the devices screen buffer. Also
 // resets page state descriptors to a "clean" state.
@@ -439,6 +440,7 @@ void I2cSsd1680Rotated::initBuffers(void)
     // clear out the screen buffer
     clearScreenBuffer();
 }
+
 ////////////////////////////////////////////////////////////////////////////////////
 // resendGraphics()
 //
@@ -455,7 +457,8 @@ void I2cSsd1680Rotated::resendGraphics(void)
     for (int i = 0; i < m_nPages; i++)
         m_pageState[i] = m_pageErase[i];
 
-    display(); // push bits to screen buffer
+    // Perform a full update
+    display();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -518,7 +521,7 @@ void I2cSsd1680Rotated::erase(void)
 
         // clear out memory that is dirty on this page
         // Here, dirty min is left, dirty max is right. I.e. standard X coordinates
-        // When we write to the displayt, these become Y...
+        // When we write to the display, these become Y...
         memset(m_pBuffer + i * m_viewport.width + m_pageState[i].min, COLOR_OFF,
                m_pageState[i].max - m_pageState[i].min + 1); // add one b/c values are 0 based
 
@@ -748,15 +751,15 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t columnStart
 
     uint8_t buffer[4];
     
-    // buffer[0] = page;
-    // buffer[1] = page;
-    // sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
+    buffer[0] = page;
+    buffer[1] = page;
+    sendDevCommand( kCmdSsd1680SetRamPosX, buffer, 2 );
 
-    // buffer[0] = (m_viewport.width - 1) - columnStart;
-    // buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
-    // buffer[2] = (m_viewport.width - 1) - columnEnd;
-    // buffer[3] = ((m_viewport.width - 1) - columnEnd) >> 8; // 0 (column is uint8_t)
-    // sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
+    buffer[0] = (m_viewport.width - 1) - columnStart;
+    buffer[1] = ((m_viewport.width - 1) - columnStart) >> 8; // 0 (column is uint8_t)
+    buffer[2] = (m_viewport.width - 1) - columnEnd;
+    buffer[3] = ((m_viewport.width - 1) - columnEnd) >> 8; // 0 (column is uint8_t)
+    sendDevCommand( kCmdSsd1680SetRamPosY, buffer, 4 );
 
     buffer[0] = page;
     sendDevCommand( kCmdSsd1680SetRamCounterX, buffer, 1 );
@@ -775,24 +778,27 @@ bool I2cSsd1680Rotated::setScreenBufferAddress(uint8_t page, uint8_t columnStart
 // Only send the areas that need to be updated. The update region is based on
 // new graphics to display, and any currently displayed items that need to be
 // erased.
-// If partial is true, perform a partial update. The SSD168x will use the Red RAM
-// as the background / base map for the partial update.
-// If background is true, write to both BW and Red RAM and then do a full update.
-// The Red RAM is the background / base map for partial updates.
+//
+// The dirty areas are sent to both BW and RED RAM
+//
+// The GoodDisplay code example:
+//  Sets the border waveform to: 0x05 for a full update; 0x80 for a partial update
+//  Performs a hardware reset before each region is sent
+//  Sets the RAM X address start / end
+//  Sets the RAM Y address start / end
+//  Sets the RAM X counter
+//  Sets the RAM Y counter
+//  For a partial update, each region is sent to BW RAM only
+//  For a partial update, display update control 2 is set to 0xFF
+//  For a full update, display update control 2 is set to 0xF7
+//  After Master Activation, display is busy for: ~2.2s full update, ~0.5s partial update
 
-void I2cSsd1680Rotated::display(bool partial, bool background)
+void I2cSsd1680Rotated::display(bool partial)
 {
-    // If background is true, ensure partial is false
-    if (background)
-        partial = false;
-
-    // Decisions, decisions... If background is true, should we send *everything*,
-    // i.e. the whole buffer, or still rely on the "dirty" areas?
-    // Sending the whole buffer is safest, but slow.
     // Sending only the dirty areas is probably OK because init calls clearScreenBuffer
     // which clears both BW and Red RAM.
 
-    bool displayReset = false;
+    bool displayUpdated = false;
 
     // Loop over our page descriptors - if a page is dirty, send the graphics
     // buffer dirty region to the device for the current page
@@ -814,23 +820,19 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
                                         // page were null
             continue;                   // next
 
-        if (!displayReset)
-        {
-            sendDevReset();
+        // Perform hardware reset - GoodDisplay code always does this - not sure if it is strictly necessary?
+        sendDevReset(); // Hardware reset
 
+        do {
             delay(10);
-
-            do {
-                delay(1);
-            } while(isBusy());
-
-            if (partial)
-                sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // HiZ
-            else
-                sendDevCommand( kCmdSsd1680WriteBorder, 0x07 ); // Follow LUT3 (White)
-
-            displayReset = true;
         }
+        while (isBusy());
+
+        // Set border - GoodDisplay code always does this
+        if (partial)
+            sendDevCommand( kCmdSsd1680WriteBorder, 0x80 ); // VBD = VCOM
+        else
+            sendDevCommand( kCmdSsd1680WriteBorder, 0x05 ); // Follow LUT1 (White)
 
         // set the start address to write the updated data to the devices screen
         // buffer
@@ -845,14 +847,12 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
 
         delay(1); // Wait for I2C->SPI at 1MHz
 
-        // If background is true, write the same data to the Red RAM so the SSD1680 can
+        // If partial is not true, write the same data to the Red RAM so the SSD1680 can
         // diff it on the next partial write
 
-        if (background)
+        if (!partial)
         {
-            // set the start address to write the updated data to the devices screen
-            // buffer
-            setScreenBufferAddress(i, transferRange.min, transferRange.max);
+            // GoodDisplay only sets the RAM address and counters once...
 
             // send the dirty data to the device
             sendDevCommand(kCmdSsd1680WriteRamRed, m_pBuffer + (i * m_viewport.width) + transferRange.min, // this page start + min
@@ -871,11 +871,13 @@ void I2cSsd1680Rotated::display(bool partial, bool background)
 
         // this page is no longer dirty - mark it  clean
         pageSetClean(m_pageState[i]);
+
+        displayUpdated = true;
     }
 
     m_pendingErase = false; // no longer pending
 
-    if (displayReset) // If some dirty pixels were sent, activate the display
+    if (!partial || displayUpdated) // If some dirty pixels were sent, activate the display
     {
         sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
         sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
@@ -912,7 +914,7 @@ void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t value)
 // send a single command and multiple values to the device via the current bus object.
 // split the write between the Data register and the Final Data register
 
-void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values)
+void I2cSsd1680Rotated::sendDevCommand(uint8_t command, uint8_t *values, uint16_t n_values)
 {
     if (!values || n_values == 0)
         return;

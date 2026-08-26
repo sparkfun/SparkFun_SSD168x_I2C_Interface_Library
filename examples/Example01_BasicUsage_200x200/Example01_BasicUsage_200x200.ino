@@ -2,7 +2,11 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+//
+// ******************************************************************************************************
+// * NOTE: This example needs (e.g.) the GoodDisplay GDEY0154D67 1.54inch 200x200 pixel e-paper display *
+// ******************************************************************************************************
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -27,7 +31,47 @@ SSD1681I2C200x200 myDevice;
 // Bitmap
 #include <res/qw_ep_bmp_sparkfun.h>
 
+// Adjust these values according to your configuration
+//------------------------------------------------------------------------------
 
+// Pre-defined boards - comment / uncomment as needed:
+//#define FACET_FP
+//#define POSTCARD
+#define ESP32_THING_PLUS_C
+
+#ifdef  FACET_FP
+
+// https://www.sparkfun.com/sparkpnt-fp-no-gnss-receiver.html
+int pin_SDA = 15;
+int pin_SCL = 4;
+const char * platform = "SparkPNT FP";
+
+#else   // FACET_FP
+#ifdef  POSTCARD
+
+// https://www.sparkfun.com/sparkfun-rtk-postcard.html
+int pin_SDA = 7;
+int pin_SCL = 20;
+const char * platform = "SparkFun RTK Postcard";
+
+#else   // POSTCARD
+#ifdef ESP32_THING_PLUS_C
+
+// https://www.sparkfun.com/sparkfun-thing-plus-esp32-wroom-usb-c.html
+int pin_SDA = 21;
+int pin_SCL = 22;
+const char * platform = "SparkFun ESP32 Thing Plus C";
+
+#else  // ESP32_THING_PLUS_C
+
+// https://www.sparkfun.com/sparkfun-iot-redboard-esp32-development-board.html
+int pin_SDA = 21;
+int pin_SCL = 22;
+const char * platform = "SparkFun IoT Redboard";
+
+#endif  // ESP32_THING_PLUS_C
+#endif  // POSTCARD
+#endif  // FACET_FP
 
 void setup()
 {
@@ -35,9 +79,9 @@ void setup()
     
     // Start serial
     Serial.begin(115200);
-    Serial.println("Running SSD168x example");
+    Serial.printf("Running SSD168x example on %s\r\n", platform);
 
-    Wire.begin();
+    Wire.begin(pin_SDA, pin_SCL);
 
     // Initalize the device and related graphics system
     if (myDevice.begin() == false)

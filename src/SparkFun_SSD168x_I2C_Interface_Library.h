@@ -2,7 +2,7 @@
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
-// This is an experimental library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
+// This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -163,12 +163,11 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     //  Parameter   Description
     //  ---------   -----------------------------
-    //  clearDisplay true - clear the internal buffers during reset
     //  retval      true on success, false on  failure
 
-    bool reset(bool clearDisplay)
+    bool reset(void)
     {
-        return m_device.reset(clearDisplay);
+        return m_device.reset();
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -179,17 +178,9 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //
     // To display any graphics, this method must be called.
 
-    void displayPartial(void)
+    void display(bool partial = false)
     {
-        m_device.display(true, false);
-    }
-    void displayBackground(void)
-    {
-        m_device.display(false, true);
-    }
-    void display(bool partial = false, bool background = false)
-    {
-        m_device.display(partial, background);
+        m_device.display(partial);
     }
 
     ///////////////////////////////////////////////////////////////////////

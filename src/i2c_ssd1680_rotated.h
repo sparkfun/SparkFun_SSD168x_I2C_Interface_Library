@@ -123,8 +123,8 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false, bool background = false); // send graphics buffer to the device screen buffer
-    void erase(void);
+    void display(bool partial = false); // send changes from graphics buffer and perform full / partial update
+    void erase(void); // erase the graphics buffer. User must call display to erase the display
 
     // Device setup
     virtual bool init(void);
@@ -133,7 +133,7 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     {
         return m_isInitialized;
     };
-    bool reset(bool clearDisplay = true);
+    bool reset(void);
 
     // method to set the communication bus this object should use
     void setCommBus(QwEpI2C &theBus, uint8_t id_bus);
@@ -188,14 +188,14 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     // Internal buffer management methods
     bool setScreenBufferAddress(uint8_t page, uint8_t columnStart, uint8_t columnEnd);
     void initBuffers(void); // clear graphics and screen buffer
-    void clearScreenBuffer(void);
+    void clearScreenBuffer(void); // clear screen buffer
     void resendGraphics(void);
-    void setupEpaperDevice(bool clearBuffer = true);
+    void setupEpaperDevice(void); // always calls initBuffers
 
     // device communication methods
     void sendDevCommand(uint8_t command);
     void sendDevCommand(uint8_t command, uint8_t value);
-    void sendDevCommand(uint8_t command, uint8_t *values, uint8_t n_values);
+    void sendDevCommand(uint8_t command, uint8_t *values, uint16_t n_values);
     void sendDevReset(void);
     uint8_t readDevStatus(void);
 
