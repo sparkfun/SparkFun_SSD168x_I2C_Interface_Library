@@ -30,7 +30,7 @@ In the above demo animated gif, the hardware is:
 * A generic "STM32G030F6P6 Mini Development System Board" - available from online retailers
     * Running the [STM32G030_I2C_SPI_Bridge](https://github.com/sparkfun/SparkFun_SSD168x_I2C_Interface_Library/tree/main/STM32G03/STM32G030_I2C_SPI_Bridge)
     * Programmed using an ST-Link V2 programmer and STM32CubeProgrammer software
-* The [GoodDisplay DESPI-C02-CV0097 0.97 inch e-paper 24-Pin to 18 18-Pin adapter board](https://www.good-display.com/product/519.html)
+* The [GoodDisplay DESPI-C02-CV0097 0.97 inch e-paper 24-Pin to 18-Pin adapter board](https://www.good-display.com/product/519.html)
     * Set the sense resistance switch to 2.2 Ohm
 * The [GoodDisplay GDEM0097T61 0.97 inch e-paper display](https://www.good-display.com/product/486.html)
 
@@ -46,7 +46,7 @@ Repository Contents
 
 Documentation
 --------------
-* **[Wiring](./WIRING.md) - wiring for STM32 programming and display adapter connections
+* **[Wiring](./WIRING.md)** - wiring for STM32 programming and display adapter connections
 * **[GitHub Repo](https://github.com/sparkfun/TODO)** - TODO: Update URL and description
 * **[Hookup Guide](http://docs.sparkfun.com/TODO/)** - TODO: Update URL and description
 
