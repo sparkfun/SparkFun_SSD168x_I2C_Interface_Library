@@ -35,6 +35,19 @@ const int yStart = 20;
 // Change this to invert the colors
 const bool invertColors = false;
 
+// This defines how many digit changes trigger a full update
+typedef enum {
+    EVERY_SECOND = 1,
+    EVERY_10_SECONDS,
+    EVERY_MINUTE,
+    EVERY_10_MINUTES,
+    EVERY_HOUR,
+    EVERY_10_HOURS,
+} numCharsChangedLimit_e;
+
+// Change numCharsChangedLimit to change how often a full update is performed
+const numCharsChangedLimit_e numCharsChangedLimit = EVERY_MINUTE;
+
 // Adjust these values according to your configuration
 //------------------------------------------------------------------------------
 
@@ -156,7 +169,7 @@ void loop()
         // for each character that has changed, erase it and update it
         for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
         {
-            if (charsChanged[i]) // Comment this if statement to always update all the characters
+            if (charsChanged[i]) // Comment this if statement if desired to always update all the characters
             {
                 myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
                                 FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
@@ -166,18 +179,8 @@ void loop()
             }
         }
 
-        // If only 1 character has changed, do a partial update,
-        // otherside do a full update and update the background
-
-        // Note: this only works because the partial update is changing a single digit.
-        //       The GDEM0097T61 has the SSD1680 ping-pong mode enabled.
-        //       You will see some very interesting things if you change the next line to:
-        //       bool partial = numCharsChanged <= 2;
-        //       The solution is to always overwrite all ten characters on each partial update.
-        //       If you change the next line to bool partial = numCharsChanged <= 2;
-        //       and comment line 159 ("//if (charsChanged[i])") above, everything works as expected.
-
-        bool partial = numCharsChanged <= 1;
+        // Do a partial update if numCharsChanged is less than numCharsChangedLimit
+        bool partial = numCharsChanged < numCharsChangedLimit;
 
         if (!partial)
             Serial.println("Performing full update");

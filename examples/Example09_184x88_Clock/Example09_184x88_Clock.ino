@@ -1,12 +1,8 @@
-// Example05 : 200x200 clock emulator using partial updates
+// Example09 : 184x88 clock emulator using partial updates
 //
 // Written by P.C. @ SparkFun Electronics, April 2026
 //
 // This is a library to control SSD1680/1 e-Paper displays via I2C, using a I2C to SPI Bridge.
-//
-// ******************************************************************************************************
-// * NOTE: This example needs (e.g.) the GoodDisplay GDEY0154D67 1.54inch 200x200 pixel e-paper display *
-// ******************************************************************************************************
 //
 // The I2C SPI Bridge is configured as a I2C peripheral with five registers:
 // Single Control (Register 0x00), Control (Register 0x01), Data (Register 0x02), Final Data (Register 0x03) and Reset (Register 0x04).
@@ -23,18 +19,30 @@
 
 #include <SparkFun_SSD168x_I2C_Interface_Library.h> // http://librarymanager/All#SparkFun_SSD168x_I2C_Interface_Library
 
-SSD1681I2C200x200 myDevice;
+SSD1680I2C184x88 myDevice;
 
 // Fonts
 #include <res/qw_ep_fnt_largenum.h>
 
 // Static char array to hold the previous time
 // Load the previous time with zeros for the background / basemap for partial updates
-static char previousTime[strlen("HHHH:MM:SS") + 1] = { '0', '0', '0', '0', ':', '0', '0', ':', '0', '0', '\0' };
+static char previousTime[strlen("HHMMSS") + 1] = { '0', '0', '0', '0', '0', '0', '\0' };
 
-// Define the start coordinates for displaying the time
-const int xStart = 40;
-const int yStart = 76;
+// Define the start coordinates for displaying the time digits
+// Digit 0 is the 10's of hours
+typedef struct {
+    const int x;
+    const int y;
+} topLeft_t;
+
+const topLeft_t topLeftDigitCoords[] = {
+    { 32, 15 },
+    { 44, 15 },
+    { 32, 68 },
+    { 44, 68 },
+    { 32, 121 },
+    { 44, 121 },
+};
 
 // Change this to invert the colors
 const bool invertColors = false;
@@ -122,9 +130,14 @@ void setup()
     // Fill a rectangle within that, to leave an 4 pixel frame
     myDevice.rectangleFill(8, 8, myDevice.getWidth() - 16, myDevice.getHeight() - 16, invertColors ? COLOR_ON : COLOR_OFF);
 
-    // Add the 0000:00:00 held in previousTime - this becomes the background for partial updates
+    // Add the 000000 held in previousTime - this becomes the background for partial updates
     myDevice.setFont(QW_EP_FONT_LARGENUM);
-    myDevice.text(xStart, yStart, previousTime, invertColors ? COLOR_OFF : COLOR_ON);
+    for (int i = 0; i < strlen("HHMMSS"); i++)
+    {
+        char newChar[2];
+        sprintf(newChar, "%c", previousTime[i]);
+        myDevice.text(topLeftDigitCoords[i].x, topLeftDigitCoords[i].y, newChar, invertColors ? COLOR_OFF : COLOR_ON);
+    }
 
     // There's nothing on the screen yet
     // Send the graphics to the device and also set the background for partial updates
@@ -138,23 +151,24 @@ void setup()
 void loop()
 {
     // char array to hold the time
-    char theTime[strlen("HHHH:MM:SS") + 1];
+    char theTime[strlen("HHMMSS") + 1];
 
     // split millis into hours, mins and secs
     int hh,mm,ss;
-    ss = millis() / 1000;
+    ss = millis() / 1000; // Convert millis to seconds
+    ss = ss % 86400; // Limit to 23:59:59
     hh = ss / 3600;
     ss -= hh * 3600;
     mm = ss / 60;
     ss -= mm * 60;
 
     // print into theTime
-    sprintf(theTime, "%04d:%02d:%02d", hh, mm, ss);
+    sprintf(theTime, "%02d%02d%02d", hh, mm, ss);
 
-    // work out how many and which characters have changed
+    // Work out how many and which characters have changed
     int numCharsChanged = 0;
-    bool charsChanged[strlen("HHHH:MM:SS")];
-    for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
+    bool charsChanged[strlen("HHMMSS")];
+    for (int i = 0; i < strlen("HHMMSS"); i++)
     {
         if (theTime[i] != previousTime[i])
         {
@@ -171,15 +185,15 @@ void loop()
         Serial.println(theTime);
 
         // for each character that has changed, erase it and update it
-        for (int i = 0; i < strlen("HHHH:MM:SS"); i++)
+        for (int i = 0; i < strlen("HHMMSS"); i++)
         {
-            if (charsChanged[i]) // Comment this if statement to always update all the characters
+            if (charsChanged[i]) // Comment this if statement if desired to always update all the characters
             {
-                myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
+                myDevice.rectangleFill(topLeftDigitCoords[i].x, topLeftDigitCoords[i].y,
                                 FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT, invertColors ? COLOR_ON : COLOR_OFF);
                 char newChar[2];
                 sprintf(newChar, "%c", theTime[i]);
-                myDevice.text(xStart + i * FONT_LARGENUM_WIDTH, yStart, newChar, invertColors ? COLOR_OFF : COLOR_ON);
+                myDevice.text(topLeftDigitCoords[i].x, topLeftDigitCoords[i].y, newChar, invertColors ? COLOR_OFF : COLOR_ON);
             }
         }
 

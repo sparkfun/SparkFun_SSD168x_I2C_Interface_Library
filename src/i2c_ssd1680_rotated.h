@@ -205,9 +205,10 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     // Buffer variables
     uint8_t *m_pBuffer;                      // Pointer to the graphics buffer
     uint8_t m_nPages;                        // number of pages for current device
-    pageStateEp_t m_pageState[kMaxPageNumberSSD1680]; // page state descriptors
-    pageStateEp_t m_pageErase[kMaxPageNumberSSD1680]; // keep track of erase boundaries
-    bool m_pendingErase;
+    static const int kNumRamBanksSSD168x = 2;
+    pageStateEp_t m_pageState[kNumRamBanksSSD168x][kMaxPageNumberSSD1680]; // page state descriptors
+    pageStateEp_t m_pageErase[kNumRamBanksSSD168x][kMaxPageNumberSSD1680]; // keep track of erase boundaries
+    bool m_pendingErase[kNumRamBanksSSD168x][kMaxPageNumberSSD1680];
 
     // display variables
     uint8_t m_color;    // current color (really 0 or 1)

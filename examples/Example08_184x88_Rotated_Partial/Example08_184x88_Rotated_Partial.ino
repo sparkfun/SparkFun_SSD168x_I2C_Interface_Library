@@ -54,7 +54,7 @@ const bool displayDigits = true;
 
 const int numDigits = 11; // Print 0123456789: using partial updates
 const int numLoops = 3; // Print digits this many times before doing a full refresh
-const int numWrites = 2; // Write each partial update this many times - compensate for the ping-pong
+const int numWrites = 1; // Write each partial update this many times - useful to check ghosting
 
 // Adjust these values according to your configuration
 //------------------------------------------------------------------------------
@@ -142,7 +142,7 @@ void loop()
     // Digits 0123456789:
     if (displayDigits)
     {
-        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
+        for (int w = 0; w < numWrites; w++) // Do each partial update this many times
         {
             // Erase the previous digit
             if ((digitCount == 0) && (loopCount == 0))
@@ -179,7 +179,7 @@ void loop()
     // Stripes : 11 8-pixel stripes, matches the display width of 88 pixels in bytes
     else
     {
-        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
+        for (int w = 0; w < numWrites; w++) // Do each partial update this many times
         {
             // Erase the previous stripe
             if ((digitCount == 0) && (loopCount == 0))

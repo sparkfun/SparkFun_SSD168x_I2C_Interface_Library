@@ -64,6 +64,71 @@ _QwEpIDraw_vtable *GetIDrawVTable(_QwEpIDraw *obj)
     return *vtable_ptr;
 }
 
+//////////////////////////////////////////////////////////////////////////////////
+// Screen Buffer
+//
+// A key feature of this library is that it only sends "dirty" pixels to the
+// device, minimizing data transfer over the I2C bus. To accomplish this, the
+// dirty range of each graphics buffer page (see device memory layout in the
+// datasheet) is maintained during drawing operation. Whe data is sent to the
+// device, only the pixels in these regions are sent to the device, not the
+// entire page of data.
+//
+// The below macros are used to manage the record keeping of dirty page ranges.
+// Given that these actions are taking place in the draw loop, macros are used
+// for performance considerations.
+//
+// These macros work with the pageStateEp_t struct type.
+//
+// Define unique values just outside of the screen buffer (SSD1680) page range
+// (0 base) Note: A page should be 296 bytes in length, but parts of this library
+// are hard-wired to 8-bit coordinates... Here we use a limit of 200 bytes per page.
+
+// clean/ no settings in the page
+bool QwEpGrBufferDevice::pageIsClean(pageStateEp_t &_page_)
+{
+    return ((_page_.min == kPageMax) && (_page_.max == kPageMin));
+}
+
+// reset page descriptor
+void QwEpGrBufferDevice::pageSetClean(pageStateEp_t &_page_)
+{
+    _page_.min = kPageMax;
+    _page_.max = kPageMin;
+}
+
+// Check and adjust record bounds based on a single location
+// The _c_ value must be within the screen (0 <= y < width), limit
+// values are ignored
+void QwEpGrBufferDevice::pageCheckBounds(pageStateEp_t &_page_, uint8_t _c_)
+{
+    if (_c_ < _page_.min)
+        _page_.min = _c_;
+    if (_c_ > _page_.max)
+        _page_.max = _c_;
+}
+
+// Macro to check and adjust record bounds using another page descriptor
+// The _page2_ y values must be within the screen (0 <= y < width), limit
+// values are ignored
+void QwEpGrBufferDevice::pageCheckBoundsDesc(pageStateEp_t &_page_, pageStateEp_t &_page2_)
+{
+    if (_page2_.min < _page_.min)
+        _page_.min = _page2_.min;
+    if (_page2_.max > _page_.max)
+        _page_.max = _page2_.max;
+}
+
+// Macro to check and adjust record bounds using bounds values
+// Values _c0_ and _c1_ must be within the screen (0 <= y < width)
+void QwEpGrBufferDevice::pageCheckBoundsRange(pageStateEp_t &_page_, uint8_t _c0_, uint8_t _c1_)
+{
+    if (_c0_ < _page_.min)
+        _page_.min = _c0_;
+    if (_c1_ > _page_.max)
+        _page_.max = _c1_;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 // initDrawFunctions()
 //

@@ -50,9 +50,3 @@ typedef enum gr_ep_op_funcs_
     grEpROPOff = 4,
     grEpROPOn = 5
 } grEpRasterOp_t;
-
-typedef struct
-{
-    int16_t min;
-    int16_t max;
-} pageStateEp_t;
