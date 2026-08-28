@@ -688,25 +688,20 @@ void I2cSsd1681::display(bool partial)
         // If this is a partial update, expand to include the previous range
 
         transferRange = m_pageState[0][i];
-        if (partial)
-            pageCheckBoundsDesc(transferRange, m_pageState[1][i]);
+        pageCheckBoundsDesc(transferRange, m_pageState[1][i]);
 
         // If an erase has happend, we need to transfer/include erase update range
         if (m_pendingErase[0][i])
             pageCheckBoundsDesc(transferRange, m_pageErase[0][i]);
-        if (partial)
-            if (m_pendingErase[1][i])
-                pageCheckBoundsDesc(transferRange, m_pageErase[1][i]);
+        if (m_pendingErase[1][i])
+            pageCheckBoundsDesc(transferRange, m_pageErase[1][i]);
 
         if (pageIsClean(transferRange)) // both dirty and erase range for this
                                         // page were null
         {
-            if (partial)
-            {
-                m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
-                m_pageErase[1][i] = m_pageErase[0][i];
-                m_pendingErase[1][i] = m_pendingErase[0][i];
-            }
+            m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
+            m_pageErase[1][i] = m_pageErase[0][i];
+            m_pendingErase[1][i] = m_pendingErase[0][i];
             m_pendingErase[0][i] = false; // no longer pending. Redundant?
             continue;                     // next
         }
@@ -749,12 +744,9 @@ void I2cSsd1681::display(bool partial)
             delay(1); // Wait for I2C->SPI at 1MHz
         }
 
-        if (partial)
-        {
-            m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
-            m_pageErase[1][i] = m_pageErase[0][i];
-            m_pendingErase[1][i] = m_pendingErase[0][i];
-        }
+        m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
+        m_pageErase[1][i] = m_pageErase[0][i];
+        m_pendingErase[1][i] = m_pendingErase[0][i];
 
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear
