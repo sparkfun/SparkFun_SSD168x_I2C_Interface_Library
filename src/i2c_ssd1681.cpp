@@ -403,11 +403,6 @@ void I2cSsd1681::erase(void)
         // Add the areas with pixels set and have been sent to the
         // device - this is the contents of m_pageErase
 
-        // Copy the current page info into previous
-        m_pageState[1][i] = m_pageState[0][i];
-        m_pageErase[1][i] = m_pageErase[0][i];
-        m_pendingErase[1][i] = m_pendingErase[0][i];
-
         pageCheckBoundsDesc(m_pageState[0][i], m_pageErase[0][i]);
 
         // if this page is clean, there is nothing to update
