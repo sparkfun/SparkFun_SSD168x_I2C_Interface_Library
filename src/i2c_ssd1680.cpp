@@ -326,38 +326,17 @@ void I2cSsd1680::initBuffers(void)
         memset(m_pBuffer, COLOR_OFF, m_viewport.height * m_viewport.width / kByteNBits);
 
     // Set page descs to "clean" state
-    for (j = 0; j < kNumRamBanksSSD168x; j++)
+    for (i = 0; i < m_nPages; i++)
     {
-        for (i = 0; i < m_nPages; i++)
-        {
-            pageSetClean(m_pageState[j][i]);
-            pageSetClean(m_pageErase[j][i]);
-            m_pendingErase[j][i] = false;
-        }
+        pageSetClean(m_pageState[i]);
+        pageSetClean(m_pageErase[i]);
+        pageSetClean(m_pagePrevious[i]);
+        m_pendingErase[i] = false;
     }
 
     // clear out the screen buffer
     clearScreenBuffer();
 }
-////////////////////////////////////////////////////////////////////////////////////
-// resendGraphics()
-//
-// Re-send the region in the graphics buffer (local) that contains drawn
-// graphics. This region is defined by the contents of the m_pageErase
-// descriptors.
-//
-// Copy these to the page state, and call display
-//
-
-void I2cSsd1680::resendGraphics(void)
-{
-    // Set the page state dirty bounds to the bounds of erase state
-    for (int i = 0; i < m_nPages; i++)
-        m_pageState[0][i] = m_pageErase[0][i];
-
-    display(); // push bits to screen buffer
-}
-
 ////////////////////////////////////////////////////////////////////////////////////
 // deepSleep()
 //
@@ -410,22 +389,22 @@ void I2cSsd1680::erase(void)
         // Add the areas with pixels set and have been sent to the
         // device - this is the contents of m_pageErase
 
-        pageCheckBoundsDesc(m_pageState[0][i], m_pageErase[0][i]);
+        pageCheckBoundsDesc(m_pageState[i], m_pageErase[i]);
 
         // if this page is clean, there is nothing to update
-        if (pageIsClean(m_pageState[0][i]))
+        if (pageIsClean(m_pageState[i]))
             continue;
 
         // clear out memory that is dirty on this page
-        memset(m_pBuffer + i * m_viewport.height + m_pageState[0][i].min, COLOR_OFF,
-               m_pageState[0][i].max - m_pageState[0][i].min + 1); // add one b/c values are 0 based
+        memset(m_pBuffer + i * m_viewport.height + m_pageState[i].min, COLOR_OFF,
+               m_pageState[i].max - m_pageState[i].min + 1); // add one b/c values are 0 based
 
         // clear out any pending dirty range for this page - it's erased
-        pageSetClean(m_pageState[0][i]);
+        pageSetClean(m_pageState[i]);
 
         // Indicate that the data transfer to the device should include the erase
         // region
-        m_pendingErase[0][i] = true;
+        m_pendingErase[i] = true;
     }
 }
 
@@ -448,7 +427,7 @@ void I2cSsd1680::drawPixel(uint8_t x, uint8_t y, uint8_t clr)
     curROP(m_pBuffer + y + x / kByteNBits * m_viewport.height, // pixel offset
                        (clr == COLOR_ON ? bit : 0), bit);      // which bit to set / clear in byte
 
-    pageCheckBounds(m_pageState[0][x / kByteNBits],
+    pageCheckBounds(m_pageState[x / kByteNBits],
                     y); // update dirty range for page
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -482,7 +461,7 @@ void I2cSsd1680::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
         curROP(pBuffer, (clr == COLOR_ON ? bit : 0), bit);
 
     // Mark the page dirty for the range drawn
-    pageCheckBoundsRange(m_pageState[0][x0 / kByteNBits], y0, y1);
+    pageCheckBoundsRange(m_pageState[x0 / kByteNBits], y0, y1);
 }
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_line_horz()
@@ -548,7 +527,7 @@ void I2cSsd1680::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 
         x0 += endBit - startBit + 1; // increment x0 to next page
 
-        pageCheckBoundsRange(m_pageState[0][i], y0,
+        pageCheckBoundsRange(m_pageState[i], y0,
                              y1); // mark dirty range in page desc
     }
 }
@@ -612,7 +591,7 @@ void I2cSsd1680::drawBitmap(uint8_t x0, uint8_t y0, uint8_t dst_width, uint8_t d
             uint8_t color = (theByte & bitMask) ? COLOR_ON : COLOR_OFF;
             drawPixel(x0 + x, y0 + y, color);
 
-            pageCheckBoundsRange(m_pageState[0][(x0 + x) / kByteNBits], y0,
+            pageCheckBoundsRange(m_pageState[(x0 + x) / kByteNBits], y0,
                                  y0 + dst_height - 1); // mark dirty range in page desc
         }
     }
@@ -687,28 +666,20 @@ void I2cSsd1680::display(bool partial)
         // We keep the erase rect seperate from dirty rect. Make temp copy of
         // dirty rect page range, expand to include erase rect page range.
 
-        transferRange = m_pageState[0][i];
-        if (partial)
-            pageCheckBoundsDesc(transferRange, m_pageState[1][i]);
+        transferRange = m_pageState[i];
 
         // If an erase has happend, we need to transfer/include erase update range
-        if (m_pendingErase[0][i])
-            pageCheckBoundsDesc(transferRange, m_pageErase[0][i]);
-        if (partial)
-            if (m_pendingErase[1][i])
-                pageCheckBoundsDesc(transferRange, m_pageErase[1][i]);
+        if (m_pendingErase[i])
+            pageCheckBoundsDesc(transferRange, m_pageErase[i]);
 
-        if (pageIsClean(transferRange)) // both dirty and erase range for this
+        // Expand to include the previous range
+        pageCheckBoundsDesc(transferRange, m_pagePrevious[i]);
+
+        if (pageIsClean(transferRange)) // dirty, erase and previous range for this
                                         // page were null
         {
-            if (partial)
-            {
-                m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
-                m_pageErase[1][i] = m_pageErase[0][i];
-                m_pendingErase[1][i] = m_pendingErase[0][i];
-            }
-            m_pendingErase[0][i] = false; // no longer pending. Redundant?
-            continue;                     // next
+            m_pendingErase[i] = false; // Ensure pending is clear. Redundant?
+            continue;                  // next
         }
 
         // Perform hardware reset - GoodDisplay code always does this - not sure if it is strictly necessary?
@@ -749,31 +720,26 @@ void I2cSsd1680::display(bool partial)
             delay(1); // Wait for I2C->SPI at 1MHz
         }
 
-        if (partial)
-        {
-            m_pageState[1][i] = m_pageState[0][i]; // Copy current into previous
-            m_pageErase[1][i] = m_pageErase[0][i];
-            m_pendingErase[1][i] = m_pendingErase[0][i];
-        }
+        m_pagePrevious[i] = m_pageState[i]; // Copy current into previous
+        if (m_pendingErase[i]) // Expand to include the erase area
+            pageCheckBoundsDesc(m_pagePrevious[i], m_pageErase[i]);
 
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear
-        if (m_pendingErase[0][i])
-        {
-            m_pendingErase[0][i] = false; // no longer pending
-            pageSetClean(m_pageErase[0][i]);
-        }
+        if (m_pendingErase[i])
+            pageSetClean(m_pageErase[i]);
 
         // add the just send dirty range (non erase rec)  to the erase rect
-        pageCheckBoundsDesc(m_pageErase[0][i], m_pageState[0][i]); // TODO - CHECK THIS!
+        pageCheckBoundsDesc(m_pageErase[i], m_pageState[i]);
 
         // this page is no longer dirty - mark it  clean
-        pageSetClean(m_pageState[0][i]);
+        pageSetClean(m_pageState[i]);
 
         displayUpdated = true;
     }
 
-    if (!partial || displayUpdated) // If some dirty pixels were sent, activate the display
+    // If this is a full update, or some dirty pixels were sent, activate the display
+    if (!partial || displayUpdated)
     {
         sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
         sendDevCommand( kCmdSsd1680MasterActivate ); // Activate

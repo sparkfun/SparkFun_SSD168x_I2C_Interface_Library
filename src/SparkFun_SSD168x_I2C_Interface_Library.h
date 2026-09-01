@@ -187,8 +187,8 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // erase()
     //
     // Erases all graphics on the device, placing the display in a blank state.
-    // The erase update isn't sent to the device until the next display() call
-    // on the device.
+    // ** The erase update isn't sent to the device until the next display() call
+    // on the device. **
 
     void erase(void)
     {

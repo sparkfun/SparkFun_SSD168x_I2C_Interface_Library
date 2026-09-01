@@ -66,9 +66,11 @@ If you then set a different group of pixels black and do a second _partial_ upda
 If you then set a third group of pixels black and do a third _partial_ update, the first and third groups are displayed - the second group is hidden.
 We believe this is caused by the SSD168x "ping-pong" mode - automatic switching of the RAM banks.
 
-One solution is to re-write all pixels before each partial update. But that takes time - especially over I2C. This library is based on the concept of "dirty pixels". Only pixel areas which have actually changed are written to the display. This means the ping-pong mode can cause some interesting 'blinking' or 'flashing' effects.
+One solution is to re-write all pixels before each partial update. But that takes time - especially over I2C.
 
-Our solution is to record which group(s) of pixels have changed for the current partial update, and to record which group(s) were changed during the previous partial update. The "dirty pixel" areas are expanded to cover both the latest changes and the previous changes. Inside the code, you will find that ```m_pageState``` and ```m_pageErase``` are 2D arrays: the first axis is the number of 'pages' supported by the display, the second is current vs. previous.
+This library is based on the concept of "dirty pixels". Only pixel areas which have actually changed are written to the display. This means the ping-pong mode can cause some interesting 'blinking' or 'flashing' effects.
+
+Our solution is to record which group(s) of pixels have changed for the current partial update, and to record which group(s) were changed during the previous partial update. The "dirty pixel" areas are expanded to cover both the latest changes (```m_pageState```) and the previous changes (```m_pagePrevious```).
 
 License Information
 -------------------
