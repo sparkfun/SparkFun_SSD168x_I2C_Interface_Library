@@ -31,6 +31,10 @@ SSD1680I2C184x88Rotated myDevice;
 // Change this to invert the colors
 const bool invertColors = false;
 
+// Change this to change how often the full update is performed
+// Useful for evaluating the ghosting from successive partial updates
+const int fullUpdateEvery = 60;
+
 // Top-Left corner
 const int startX = 28;
 const int startY = 12;
@@ -130,7 +134,6 @@ void setup()
 void loop()
 {
     static int loopCount = 0;
-    const int fullUpdateEvery = 20;
     char theText[8];
 
     // Add the SIV and HPA
@@ -168,6 +171,7 @@ void loop()
     else // if (loopCount % 4 == 3)
         myDevice.bitmap( startX + 119, startY + 52, (uint8_t *)Logging_3, Logging_Width, Logging_Height );
 
+    // Perform a full update when loopCount reaches fullUpdateEvery
     bool partial = ((loopCount % fullUpdateEvery) != 0);
 
     myDevice.display(partial);

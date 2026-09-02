@@ -68,6 +68,10 @@ const uint8_t text_byte_bits[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x8
 //
 #define swap_int(_a_, _b_) (((_a_) ^= (_b_)), ((_b_) ^= (_a_)), ((_a_) ^= (_b_)))
 
+// Page bounds
+#define kPageMin -1  // outside bounds - low value
+#define kPageMax 200 // outside bounds - high value - ** Strictly this should be 296 (16-bit)! **
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 // _QwEpIDraw
 //
@@ -149,6 +153,12 @@ struct _QwEpIDraw_vtable
 //  Buffer class - defines basics for a memory buffer drawing class. Note it subclasses
 //  from QwEpIDraw
 
+typedef struct
+{
+    int16_t min;
+    int16_t max;
+} pageStateEp_t;
+
 class QwEpGrBufferDevice : protected _QwEpIDraw
 {
 
@@ -226,7 +236,7 @@ class QwEpGrBufferDevice : protected _QwEpIDraw
     void text(uint8_t x0, uint8_t y0, const char *text, uint8_t clr = COLOR_ON);
 
     // subclass interface
-    virtual void display(bool partial) = 0;
+    virtual void display(bool partial, bool displayOnly) = 0;
     virtual void erase(void) = 0;
 
   protected:
@@ -258,6 +268,13 @@ class QwEpGrBufferDevice : protected _QwEpIDraw
 
     // Current Font
     QwEpFont *m_currentFont;
+
+    // Helper methods for page bounds
+    bool pageIsClean(pageStateEp_t &_page_); // clean/ no settings in the page
+    void pageSetClean(pageStateEp_t &_page_); // reset page descriptor
+    void pageCheckBounds(pageStateEp_t &_page_, uint8_t _c_); // Check and adjust record bounds
+    void pageCheckBoundsDesc(pageStateEp_t &_page_, pageStateEp_t &_page2_); // Macro to check and adjust record bounds
+    void pageCheckBoundsRange(pageStateEp_t &_page_, uint8_t _c0_, uint8_t _c1_); // Macro to check and adjust record bounds
 
   private:
     bool initDrawFunctions(void);

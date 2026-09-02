@@ -42,7 +42,11 @@ SSD1680I2C184x88Rotated myDevice;
 #include <res/qw_ep_fnt_largenum.h> // 12x48
 
 // Define the start coordinates for displaying the digits
-const int xStart = 27;
+// xStart 23 allows for half-digit overlap ((184 - (12 * 11.5)) / 2)
+// To check the rectangleFill() erase is working correctly, set xStart
+// to (e.g.) 70 to print the 9 over the screen boundary
+// Or set yStart to (e.g.) 62 to print all digits over the boundary
+const int xStart = 23;
 const int yStart = 20;
 
 // Change this to invert the colors
@@ -54,7 +58,15 @@ const bool displayDigits = true;
 
 const int numDigits = 11; // Print 0123456789: using partial updates
 const int numLoops = 3; // Print digits this many times before doing a full refresh
-const int numWrites = 2; // Write each partial update this many times - compensate for the ping-pong
+const int numWrites = 1; // Write each partial update this many times - useful to check ghosting
+
+// Change this to true to overlap the digits by half a digit - useful for erase tests
+const bool overlapDigits = false;
+
+// Change this to true to use erase() to erase the digits / stripes instead of rectangleFill()
+const bool useErase = false;
+
+const unsigned long deepSleep_ms = 1000;
 
 // Adjust these values according to your configuration
 //------------------------------------------------------------------------------
@@ -124,6 +136,7 @@ void loop()
 {
     static int digitCount = 0;
     static int loopCount = 0;
+    static int digitLimit = overlapDigits ? numDigits * 2 : numDigits;
 
     if ((digitCount == 0) && (loopCount == 0))
     {
@@ -142,7 +155,11 @@ void loop()
     // Digits 0123456789:
     if (displayDigits)
     {
-        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
+        int xinc = FONT_LARGENUM_WIDTH;
+        if (overlapDigits)
+            xinc /= 2;
+
+        for (int w = 0; w < numWrites; w++) // Do each partial update this many times
         {
             // Erase the previous digit
             if ((digitCount == 0) && (loopCount == 0))
@@ -151,19 +168,28 @@ void loop()
             }
             else
             {
-                int i = digitCount - 1;
-                if (i < 0)
-                    i = numDigits - 1;
-    
-                myDevice.rectangleFill(xStart + i * FONT_LARGENUM_WIDTH, yStart,
-                                       FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT,
-                                       invertColors ? COLOR_ON : COLOR_OFF);
+                if (useErase)
+                {
+                    // Use erase() to clear the previous digit
+                    myDevice.erase();
+                }
+                else
+                {
+                    // Draw over the previous digit with rectangleFill
+                    int i = digitCount - 1;
+                    if (i < 0)
+                        i = digitLimit - 1;
+        
+                    myDevice.rectangleFill(xStart + i * xinc, yStart,
+                                        FONT_LARGENUM_WIDTH, FONT_LARGENUM_HEIGHT,
+                                        invertColors ? COLOR_ON : COLOR_OFF);
+                }
             }
 
             // Write the new digit
             char newChar[2];
-            sprintf(newChar, "%c", '0' + digitCount);
-            myDevice.text(xStart + digitCount * FONT_LARGENUM_WIDTH, yStart, newChar,
+            sprintf(newChar, "%c", '0' + (digitCount % numDigits));
+            myDevice.text(xStart + digitCount * xinc, yStart, newChar,
                           invertColors ? COLOR_OFF : COLOR_ON);
 
             // Partial update
@@ -179,7 +205,11 @@ void loop()
     // Stripes : 11 8-pixel stripes, matches the display width of 88 pixels in bytes
     else
     {
-        for (int w = 0; w < numWrites; w++) // Write twice. Compensate for the ping-pong
+        int yinc = 8;
+        if (overlapDigits)
+            yinc /= 2;
+
+        for (int w = 0; w < numWrites; w++) // Do each partial update this many times
         {
             // Erase the previous stripe
             if ((digitCount == 0) && (loopCount == 0))
@@ -188,15 +218,24 @@ void loop()
             }
             else
             {
-                int i = digitCount - 1;
-                if (i < 0)
-                    i = numDigits - 1;
-    
-                myDevice.rectangleFill(0, i * 8, 184, 8, invertColors ? COLOR_ON : COLOR_OFF);
+                if (useErase)
+                {
+                    // Use erase() to clear the previous digit
+                    myDevice.erase();
+                }
+                else
+                {
+                    // Draw over the previous digit with rectangleFill
+                    int i = digitCount - 1;
+                    if (i < 0)
+                        i = digitLimit - 1;
+
+                    myDevice.rectangleFill(0, i * yinc, 184, 8, invertColors ? COLOR_ON : COLOR_OFF);
+                }
             }
 
             // Write the new stripe
-            myDevice.rectangleFill(0, digitCount * 8, 184, 8, invertColors ? COLOR_OFF : COLOR_ON);
+            myDevice.rectangleFill(0, digitCount * yinc, 184, 8, invertColors ? COLOR_OFF : COLOR_ON);
 
             // Partial update
             myDevice.display(true);
@@ -210,7 +249,7 @@ void loop()
 
     // Increment the counters
     digitCount++;
-    digitCount %= numDigits;
+    digitCount %= digitLimit;
     if (digitCount == 0)
     {
         loopCount++;
@@ -221,5 +260,5 @@ void loop()
     myDevice.deepSleep();
 
     // Delay
-    delay(1000);
+    delay(deepSleep_ms);
 }

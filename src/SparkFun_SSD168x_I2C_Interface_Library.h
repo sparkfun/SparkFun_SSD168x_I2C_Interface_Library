@@ -177,18 +177,26 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // device. This includes drawn graphics and erase commands.
     //
     // To display any graphics, this method must be called.
+    //
+    // display() will always reset (wake) the SSD168x, even if there if nothing
+    // new to display. This avoids it staying in deep sleep and holding BUSY high.
+    //
+    //  Parameter   Description
+    //  ---------   -----------------------------
+    //  partial     false (default) : full update, true : partial update
+    //  dirtyOnly   true (default) : send dirty pixels, false : send all pixels
 
-    void display(bool partial = false)
+    void display(bool partial = false, bool dirtyOnly = true)
     {
-        m_device.display(partial);
+        m_device.display(partial, dirtyOnly);
     }
 
     ///////////////////////////////////////////////////////////////////////
     // erase()
     //
     // Erases all graphics on the device, placing the display in a blank state.
-    // The erase update isn't sent to the device until the next display() call
-    // on the device.
+    // ** The erase update isn't sent to the device until the next display() call
+    // on the device. **
 
     void erase(void)
     {
@@ -567,7 +575,6 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 
     void text(uint8_t x0, uint8_t y0, String &text, uint8_t clr = COLOR_ON)
     {
-
         m_device.text(x0, y0, text.c_str(), clr);
     }
 

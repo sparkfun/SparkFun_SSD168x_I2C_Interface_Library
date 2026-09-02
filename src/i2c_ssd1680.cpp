@@ -31,75 +31,6 @@
 //
 
 //////////////////////////////////////////////////////////////////////////////////
-// Screen Buffer
-//
-// A key feature of this library is that it only sends "dirty" pixels to the
-// device, minimizing data transfer over the I2C bus. To accomplish this, the
-// dirty range of each graphics buffer page (see device memory layout in the
-// datasheet) is maintained during drawing operation. Whe data is sent to the
-// device, only the pixels in these regions are sent to the device, not the
-// entire page of data.
-//
-// The below macros are used to manage the record keeping of dirty page ranges.
-// Given that these actions are taking place in the draw loop, macros are used
-// for performance considerations.
-//
-// These macros work with the pageStateEp_t struct type.
-//
-// Define unique values just outside of the screen buffer (SSD1680) page range
-// (0 base) Note: A page should be 296 bytes in length, but parts of this library
-// are hard-wired to 8-bit coordinates... Here we use a limit of 200 bytes per page.
-
-#define kPageMin -1  // outside bounds - low value
-#define kPageMax 200 // outside bounds - high value - ** Strictly this should be 296 (16-bit)! **
-
-// clean/ no settings in the page
-#define pageIsClean(_page_) (_page_.min == kPageMax)
-
-// Macro to reset page descriptor
-#define pageSetClean(_page_)                                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        _page_.min = kPageMax;                                                                                        \
-        _page_.max = kPageMin;                                                                                        \
-    } while (false)
-
-// Macro to check and adjust record bounds based on a single location
-// The _c_ value must be within the screen (0 <= y < width), limit
-// values are ignored
-#define pageCheckBounds(_page_, _c_)                                                                                   \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_c_ < _page_.min)                                                                                         \
-            _page_.min = _c_;                                                                                         \
-        if (_c_ > _page_.max)                                                                                         \
-            _page_.max = _c_;                                                                                         \
-    } while (false)
-
-// Macro to check and adjust record bounds using another page descriptor
-// The _page2_ y values must be within the screen (0 <= y < width), limit
-// values are ignored
-#define pageCheckBoundsDesc(_page_, _page2_)                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_page2_.min < _page_.min)                                                                                \
-            _page_.min = _page2_.min;                                                                                \
-        if (_page2_.max > _page_.max)                                                                                \
-            _page_.max = _page2_.max;                                                                                \
-    } while (false)
-
-// Macro to check and adjust record bounds using bounds values
-// Values _c0_ and _c1_ must be within the screen (0 <= y < width)
-#define pageCheckBoundsRange(_page_, _c0_, _c1_)                                                                       \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (_c0_ < _page_.min)                                                                                        \
-            _page_.min = _c0_;                                                                                        \
-        if (_c1_ > _page_.max)                                                                                        \
-            _page_.max = _c1_;                                                                                        \
-    } while (false)
-
-//////////////////////////////////////////////////////////////////////////////////
 // Communication
 //
 // When communicating with the device, you either send commands or data. Define
@@ -206,7 +137,7 @@ bool I2cSsd1680::init(void)
     setupEpaperDevice(); // calls initBuffers which will call clearScreenBuffer
 
     // Perform a full update
-    display();
+    display(false, false);
 
     do {
         delay(10);
@@ -233,7 +164,7 @@ bool I2cSsd1680::reset(void)
     initBuffers(); // Note: calls clearScreenBuffer
 
     // Perform a full update
-    display();
+    display(false, false);
 
     // User must check isBusy externally
     // do {
@@ -399,32 +330,13 @@ void I2cSsd1680::initBuffers(void)
     {
         pageSetClean(m_pageState[i]);
         pageSetClean(m_pageErase[i]);
+        pageSetClean(m_pagePrevious[i]);
+        m_pendingErase[i] = false;
     }
-
-    m_pendingErase = false;
 
     // clear out the screen buffer
     clearScreenBuffer();
 }
-////////////////////////////////////////////////////////////////////////////////////
-// resendGraphics()
-//
-// Re-send the region in the graphics buffer (local) that contains drawn
-// graphics. This region is defined by the contents of the m_pageErase
-// descriptors.
-//
-// Copy these to the page state, and call display
-//
-
-void I2cSsd1680::resendGraphics(void)
-{
-    // Set the page state dirty bounds to the bounds of erase state
-    for (int i = 0; i < m_nPages; i++)
-        m_pageState[i] = m_pageErase[i];
-
-    display(); // push bits to screen buffer
-}
-
 ////////////////////////////////////////////////////////////////////////////////////
 // deepSleep()
 //
@@ -489,11 +401,11 @@ void I2cSsd1680::erase(void)
 
         // clear out any pending dirty range for this page - it's erased
         pageSetClean(m_pageState[i]);
-    }
 
-    // Indicate that the data transfer to the device should include the erase
-    // region
-    m_pendingErase = true;
+        // Indicate that the data transfer to the device should include the erase
+        // region
+        m_pendingErase[i] = true;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -528,12 +440,20 @@ void I2cSsd1680::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 {
     // Basically we set a bit within a range in a page of our graphics buffer.
 
+    // want an ascending order
+    if (x0 > x1)
+        swap_int(x0, x1);
+
     // in range
     if (x0 >= m_viewport.width)
         return;
 
+    // want an ascending order
     if (y0 > y1)
         swap_int(y0, y1);
+
+    if (y0 >= m_viewport.height)
+        return;
 
     if (y1 >= m_viewport.height)
         y1 = m_viewport.height - 1;
@@ -558,14 +478,24 @@ void I2cSsd1680::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
 //
 void I2cSsd1680::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
+    // want an ascending order
+    if (y0 > y1)
+        swap_int(y0, y1);
+
     if (y0 >= m_viewport.height) // out of bounds
         return;
 
-    // want an accending order
+    if (y1 >= m_viewport.height)
+        y1 = m_viewport.height - 1;
+
+    // want an ascending order
     if (x0 > x1)
         swap_int(x0, x1);
 
     // keep on screen
+    if (x0 >= m_viewport.width)
+        return;
+
     if (x1 >= m_viewport.width)
         x1 = m_viewport.width - 1;
 
@@ -590,8 +520,6 @@ void I2cSsd1680::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, ui
     //       above in the init process.
 
     int yinc;
-    if (y0 > y1)
-        swap_int(y0, y1);
 
     rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
 
@@ -737,7 +665,7 @@ bool I2cSsd1680::setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t 
 // new graphics to display, and any currently displayed items that need to be
 // erased.
 
-void I2cSsd1680::display(bool partial)
+void I2cSsd1680::display(bool partial, bool dirtyOnly)
 {
     // Sending only the dirty areas is probably OK because init calls clearScreenBuffer
     // which clears both BW and Red RAM.
@@ -751,18 +679,32 @@ void I2cSsd1680::display(bool partial)
 
     for (int i = 0; i < m_nPages; i++)
     {
-        // We keep the erase rect seperate from dirty rect. Make temp copy of
-        // dirty rect page range, expand to include erase rect page range.
+        if (dirtyOnly)
+        {
+            // We keep the erase rect seperate from dirty rect. Make temp copy of
+            // dirty rect page range, expand to include erase rect page range.
 
-        transferRange = m_pageState[i];
+            transferRange = m_pageState[i];
 
-        // If an erase has happend, we need to transfer/include erase update range
-        if (m_pendingErase)
-            pageCheckBoundsDesc(transferRange, m_pageErase[i]);
+            // If an erase has happend, we need to transfer/include erase update range
+            if (m_pendingErase[i])
+                pageCheckBoundsDesc(transferRange, m_pageErase[i]);
 
-        if (pageIsClean(transferRange)) // both dirty and erase range for this
-                                        // page were null
-            continue;                   // next
+            // Expand to include the previous range
+            pageCheckBoundsDesc(transferRange, m_pagePrevious[i]);
+
+            if (pageIsClean(transferRange)) // dirty, erase and previous range for this
+                                            // page were null
+            {
+                m_pendingErase[i] = false; // Ensure pending is clear. Redundant?
+                continue;                  // next
+            }
+        }
+        else
+        {
+            transferRange.max = m_viewport.height - 1;
+            transferRange.min = 0;
+        }
 
         // Perform hardware reset - GoodDisplay code always does this - not sure if it is strictly necessary?
         sendDevReset(); // Hardware reset
@@ -802,9 +744,13 @@ void I2cSsd1680::display(bool partial)
             delay(1); // Wait for I2C->SPI at 1MHz
         }
 
+        m_pagePrevious[i] = m_pageState[i]; // Copy current into previous
+        if (m_pendingErase[i]) // Expand to include the erase area
+            pageCheckBoundsDesc(m_pagePrevious[i], m_pageErase[i]);
+
         // If we sent the erase bounds, zero out the erase bounds - this area is now
         // clear
-        if (m_pendingErase)
+        if (m_pendingErase[i])
             pageSetClean(m_pageErase[i]);
 
         // add the just send dirty range (non erase rec)  to the erase rect
@@ -816,12 +762,22 @@ void I2cSsd1680::display(bool partial)
         displayUpdated = true;
     }
 
-    m_pendingErase = false; // no longer pending
-
-    if (!partial || displayUpdated) // If some dirty pixels were sent, activate the display
+    // If this is a full update, or some dirty pixels were sent, activate the display
+    if (!partial || displayUpdated)
     {
         sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
         sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
+    }
+    else
+    {
+        // If there was nothing new to display - no dirty pixels - then reset the SSD168x
+        // just to wake it up. If it stays in deep sleep, it will hold BUSY high.
+        sendDevReset(); // Hardware reset
+
+        do {
+            delay(1);
+        }
+        while (isBusy());
     }
 }
 

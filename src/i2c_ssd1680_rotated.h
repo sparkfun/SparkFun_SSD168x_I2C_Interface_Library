@@ -123,7 +123,7 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false); // send changes from graphics buffer and perform full / partial update
+    void display(bool partial = false, bool dirtyOnly = true); // send changes from graphics buffer and perform full / partial update
     void erase(void); // erase the graphics buffer. User must call display to erase the display
 
     // Device setup
@@ -189,7 +189,6 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     bool setScreenBufferAddress(uint8_t page, uint8_t columnStart, uint8_t columnEnd);
     void initBuffers(void); // clear graphics and screen buffer
     void clearScreenBuffer(void); // clear screen buffer
-    void resendGraphics(void);
     void setupEpaperDevice(void); // always calls initBuffers
 
     // device communication methods
@@ -205,9 +204,37 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     // Buffer variables
     uint8_t *m_pBuffer;                      // Pointer to the graphics buffer
     uint8_t m_nPages;                        // number of pages for current device
+    // m_pageState
+    // The current "dirty" areas of the graphics [local] buffer.
+    // Areas that haven't been sent to the screen/device but are
+    // "dirty" (have been changed)
     pageStateEp_t m_pageState[kMaxPageNumberSSD1680]; // page state descriptors
+    // m_pageErase
+    // erase() erases all graphics on the device, placing the display in a blank state.
+    // ** The erase update isn't sent to the device until the next display() call
+    // on the device. **
+    // m_pageErase holds the area of each page which need to be erased on the next
+    // call of display()
     pageStateEp_t m_pageErase[kMaxPageNumberSSD1680]; // keep track of erase boundaries
-    bool m_pendingErase;
+    // m_pendingErase
+    // Flags to indicate which of the screen pages need to be erased.
+    // In the original OLED library, this is a single flag which is set
+    // when erase() is called and cleared by the next display().
+    // In this library, m_pendingErase has been expanded to provide
+    // a flag for each screen bank / page.
+    bool m_pendingErase[kMaxPageNumberSSD1680]; // indicates if this page needs erase
+    // The GoodDisplay e-paper displays have ping-pong mode enabled.
+    // When using partial updates, we need to ensure display() always writes
+    // the current "dirty" area(s) _and_ the previous "dirty" area(s) to the
+    // screen. (Otherwise the two SSD168x RAM banks get out of sync and we
+    // get 'flashing' / 'blinking' areas of pixels.)
+    // Thinking through how we need to handle erase():
+    // display() needs to send:
+    //   the current "dirty" area stored in m_pageState
+    //   expanded to include:
+    //     the current erased area stored in m_pageErase (if flagged)
+    //     the previous combined "dirty" area in m_pagePrevious
+    pageStateEp_t m_pagePrevious[kMaxPageNumberSSD1680]; // previous page state descriptors
 
     // display variables
     uint8_t m_color;    // current color (really 0 or 1)
