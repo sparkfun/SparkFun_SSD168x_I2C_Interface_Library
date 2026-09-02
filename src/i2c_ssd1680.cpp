@@ -137,7 +137,7 @@ bool I2cSsd1680::init(void)
     setupEpaperDevice(); // calls initBuffers which will call clearScreenBuffer
 
     // Perform a full update
-    display();
+    display(false, false);
 
     do {
         delay(10);
@@ -164,7 +164,7 @@ bool I2cSsd1680::reset(void)
     initBuffers(); // Note: calls clearScreenBuffer
 
     // Perform a full update
-    display();
+    display(false, false);
 
     // User must check isBusy externally
     // do {
@@ -665,7 +665,7 @@ bool I2cSsd1680::setScreenBufferAddress(uint8_t page, uint8_t rowStart, uint8_t 
 // new graphics to display, and any currently displayed items that need to be
 // erased.
 
-void I2cSsd1680::display(bool partial)
+void I2cSsd1680::display(bool partial, bool dirtyOnly)
 {
     // Sending only the dirty areas is probably OK because init calls clearScreenBuffer
     // which clears both BW and Red RAM.
@@ -679,23 +679,31 @@ void I2cSsd1680::display(bool partial)
 
     for (int i = 0; i < m_nPages; i++)
     {
-        // We keep the erase rect seperate from dirty rect. Make temp copy of
-        // dirty rect page range, expand to include erase rect page range.
-
-        transferRange = m_pageState[i];
-
-        // If an erase has happend, we need to transfer/include erase update range
-        if (m_pendingErase[i])
-            pageCheckBoundsDesc(transferRange, m_pageErase[i]);
-
-        // Expand to include the previous range
-        pageCheckBoundsDesc(transferRange, m_pagePrevious[i]);
-
-        if (pageIsClean(transferRange)) // dirty, erase and previous range for this
-                                        // page were null
+        if (dirtyOnly)
         {
-            m_pendingErase[i] = false; // Ensure pending is clear. Redundant?
-            continue;                  // next
+            // We keep the erase rect seperate from dirty rect. Make temp copy of
+            // dirty rect page range, expand to include erase rect page range.
+
+            transferRange = m_pageState[i];
+
+            // If an erase has happend, we need to transfer/include erase update range
+            if (m_pendingErase[i])
+                pageCheckBoundsDesc(transferRange, m_pageErase[i]);
+
+            // Expand to include the previous range
+            pageCheckBoundsDesc(transferRange, m_pagePrevious[i]);
+
+            if (pageIsClean(transferRange)) // dirty, erase and previous range for this
+                                            // page were null
+            {
+                m_pendingErase[i] = false; // Ensure pending is clear. Redundant?
+                continue;                  // next
+            }
+        }
+        else
+        {
+            transferRange.max = m_viewport.height - 1;
+            transferRange.min = 0;
         }
 
         // Perform hardware reset - GoodDisplay code always does this - not sure if it is strictly necessary?

@@ -120,7 +120,7 @@ class I2cSsd1680 : public QwEpGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false); // send graphics buffer to the device screen buffer
+    void display(bool partial = false, bool dirtyOnly = true); // send graphics buffer to the device screen buffer
     void erase(void);
 
     // Device setup

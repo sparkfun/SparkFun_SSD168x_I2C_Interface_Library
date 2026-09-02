@@ -181,11 +181,15 @@ void loop()
 
         // Do a partial update if numCharsChanged is less than numCharsChangedLimit
         bool partial = numCharsChanged < numCharsChangedLimit;
+        bool dirtyOnly = true; // dirtyOnly defaults to true
 
         if (!partial)
-            Serial.println("Performing full update");
+        {
+            dirtyOnly = false;
+            Serial.println("Performing full update - sending all pixels");
+        }
 
-        myDevice.display(partial);
+        myDevice.display(partial, dirtyOnly);
 
         // Wait for display to update
         do {

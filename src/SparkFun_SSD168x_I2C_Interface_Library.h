@@ -184,10 +184,11 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     //  Parameter   Description
     //  ---------   -----------------------------
     //  partial     false (default) : full update, true : partial update
+    //  dirtyOnly   true (default) : send dirty pixels, false : send all pixels
 
-    void display(bool partial = false)
+    void display(bool partial = false, bool dirtyOnly = true)
     {
-        m_device.display(partial);
+        m_device.display(partial, dirtyOnly);
     }
 
     ///////////////////////////////////////////////////////////////////////

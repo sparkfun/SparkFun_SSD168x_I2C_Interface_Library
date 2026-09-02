@@ -123,7 +123,7 @@ class I2cSsd1680Rotated : public QwEpGrBufferDevice
     };
 
     // Public draw methods
-    void display(bool partial = false); // send changes from graphics buffer and perform full / partial update
+    void display(bool partial = false, bool dirtyOnly = true); // send changes from graphics buffer and perform full / partial update
     void erase(void); // erase the graphics buffer. User must call display to erase the display
 
     // Device setup
