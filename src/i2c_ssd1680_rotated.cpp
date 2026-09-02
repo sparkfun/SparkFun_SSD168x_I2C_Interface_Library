@@ -353,7 +353,7 @@ void I2cSsd1680Rotated::clearScreenBuffer(void)
 
 void I2cSsd1680Rotated::initBuffers(void)
 {
-    int i,j;
+    int i;
 
     // clear out the local graphics buffer
     if (m_pBuffer)

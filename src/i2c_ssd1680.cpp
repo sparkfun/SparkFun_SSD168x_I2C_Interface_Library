@@ -319,7 +319,7 @@ void I2cSsd1680::clearScreenBuffer(void)
 
 void I2cSsd1680::initBuffers(void)
 {
-    int i,j;
+    int i;
 
     // clear out the local graphics buffer
     if (m_pBuffer)
