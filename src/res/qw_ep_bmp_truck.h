@@ -39,7 +39,7 @@ public:
         return bmp_truck_data;
     }
 
-    QwBMPTruck()
+    QwEpBMPTruck()
         : bmpEpSingleton<QwEpBMPTruck>(BMP_TRUCK_WIDTH, BMP_TRUCK_HEIGHT)
     {
     }
