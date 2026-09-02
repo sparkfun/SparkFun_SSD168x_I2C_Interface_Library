@@ -177,6 +177,13 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // device. This includes drawn graphics and erase commands.
     //
     // To display any graphics, this method must be called.
+    //
+    // display() will always reset (wake) the SSD168x, even if there if nothing
+    // new to display. This avoids it staying in deep sleep and holding BUSY high.
+    //
+    //  Parameter   Description
+    //  ---------   -----------------------------
+    //  partial     false (default) : full update, true : partial update
 
     void display(bool partial = false)
     {
@@ -567,7 +574,6 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
 
     void text(uint8_t x0, uint8_t y0, String &text, uint8_t clr = COLOR_ON)
     {
-
         m_device.text(x0, y0, text.c_str(), clr);
     }
 

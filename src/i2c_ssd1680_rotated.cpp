@@ -477,12 +477,20 @@ void I2cSsd1680Rotated::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
 {
     // Basically we set a bit within a range in a page of our graphics buffer.
 
+    // want an ascending order
+    if (y0 > y1)
+        swap_int(y0, y1);
+
     // in range
     if (y0 >= m_viewport.height)
         return;
 
+    // want an ascending order
     if (x0 > x1)
         swap_int(x0, x1);
+
+    if (x0 >= m_viewport.width)
+        return;
 
     if (x1 >= m_viewport.width)
         x1 = m_viewport.width - 1;
@@ -508,14 +516,24 @@ void I2cSsd1680Rotated::drawLineHorz(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
 //
 void I2cSsd1680Rotated::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t clr)
 {
+    // want an ascending order
+    if (x0 > x1)
+        swap_int(x0, x1);
+
     if (x0 >= m_viewport.width) // out of bounds
         return;
 
-    // want an accending order
+    if (x1 >= m_viewport.width) // out of bounds
+        x1 = m_viewport.width - 1;
+
+    // want an ascending order
     if (y0 > y1)
         swap_int(y0, y1);
 
     // keep on screen
+    if (y0 >= m_viewport.height)
+        return;
+
     if (y1 >= m_viewport.height)
         y1 = m_viewport.height - 1;
 
@@ -540,8 +558,6 @@ void I2cSsd1680Rotated::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
     //       above in the init process.
 
     int xinc;
-    if (x0 > x1)
-        swap_int(x0, x1);
 
     rasterOPsFn curROP = m_rasterOps[m_rop]; // current raster op
 
@@ -569,6 +585,7 @@ void I2cSsd1680Rotated::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
                              x1); // mark dirty range in page desc
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // draw_rect_fill()
 //
@@ -582,6 +599,7 @@ void I2cSsd1680Rotated::drawRectFilled(uint8_t x0, uint8_t y0, uint8_t width, ui
     // just call vert line
     drawLineVert(x0, y0, x1, y1, clr);
 }
+
 ////////////////////////////////////////////////////////////////////////////////////
 // draw_bitmap()
 //
@@ -801,6 +819,17 @@ void I2cSsd1680Rotated::display(bool partial)
     {
         sendDevCommand( kCmdSsd1680DisplayUpdateCtrl2, partial ? 0xFF : 0xF7 ); // DISPLAY with DISPLAY Mode 2 / 1
         sendDevCommand( kCmdSsd1680MasterActivate ); // Activate
+    }
+    else
+    {
+        // If there was nothing new to display - no dirty pixels - then reset the SSD168x
+        // just to wake it up. If it stays in deep sleep, it will hold BUSY high.
+        sendDevReset(); // Hardware reset
+
+        do {
+            delay(1);
+        }
+        while (isBusy());
     }
 }
 

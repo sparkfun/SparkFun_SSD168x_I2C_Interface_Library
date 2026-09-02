@@ -696,7 +696,6 @@ void QwEpGrBufferDevice::drawText(uint8_t x0, uint8_t y0, const char *text, uint
                 for (j = 0; j < (row == (nRows - 1) ? finalRowHeight : kByteNBits); j++)
                     if (currChar & text_byte_bits[j])
                         (*m_idraw.drawPixel)(this, x0 + i, y0 + j + rowOffset, clr);
-
             } // walk font width
 
         } // row loop
