@@ -104,7 +104,7 @@ jobs:
           # Example of additional libraries needed
           #- name: Simple FOC
           sketch-paths: |
-            - examples/example1_basic
+            - examples/Example10_184x88_Rotated_Partial_Text_Erase
           # TODO: Update the path to the sketch, file suffix not needed
           enable-warnings-report: true
           enable-deltas-report: true
