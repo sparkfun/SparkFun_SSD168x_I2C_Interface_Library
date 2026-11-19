@@ -104,7 +104,7 @@ void setup()
 
   Wire.setSDA(PB_7);
   Wire.setSCL(PB_6);
-  Wire.begin(I2C_ADDR);         // join i2c bus with address I2C_ADDR
+  Wire.begin(I2C_ADDR, false, false); // No general call. Clock stretching enabled
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent); // register event
 }
