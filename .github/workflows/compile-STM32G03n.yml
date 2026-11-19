@@ -1,0 +1,101 @@
+name: Compile STM32G03n Firmware
+
+on:
+  push:
+    paths:
+      - 'STM32G03/STM32G030_I2C_SPI_Bridge/**.ino'
+      - 'STM32G03/STM32G031_I2C_SPI_Bridge/**.ino'
+      - '.github/workflows/compile-STM32G03n.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  BRANCH: ${{ github.ref_name }}
+  SKETCH_DIR_G030: STM32G03/STM32G030_I2C_SPI_Bridge
+  SKETCH_NAME_G030: STM32G030_I2C_SPI_Bridge
+  FQBN_G030: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G030F6PX,upload_method=swdMethod,xserial=disabled,usb=none,opt=osstd,dbg=none,rtlib=nano
+  SKETCH_DIR_G031: STM32G03/STM32G031_I2C_SPI_Bridge
+  SKETCH_NAME_G031: STM32G031_I2C_SPI_Bridge
+  FQBN_G031: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G030K8TX,upload_method=swdMethod,xserial=generic,usb=none,opt=osstd,dbg=none,rtlib=nano
+  STM32_INDEX_URL: https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json
+
+jobs:
+  compile_G030:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH }}
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install STM32duino board package
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls ${{ env.STM32_INDEX_URL }}
+          arduino-cli core update-index
+          arduino-cli core install STMicroelectronics:stm32
+
+      # Generic STM32G0 series, board part number Generic G030F6Px, U(S)ART support Disabled
+      - name: Compile firmware
+        run: |
+          arduino-cli compile --fqbn ${{ env.FQBN_G030 }} --output-dir ${{ runner.temp }}/build ${{ env.SKETCH_DIR_G030 }}
+          cp ${{ runner.temp }}/build/${{ env.SKETCH_NAME_G030 }}.ino.bin ${{ env.SKETCH_DIR_G030 }}/${{ env.SKETCH_NAME_G030 }}.ino.GENERIC_G030F6PX.bin
+
+      - name: Commit and push the updated binary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ${{ env.SKETCH_DIR_G030 }}/${{ env.SKETCH_NAME_G030 }}.ino.GENERIC_G030F6PX.bin
+          if git diff --cached --quiet; then
+            echo "Binary is unchanged - nothing to commit"
+          else
+            git commit -m "Update ${{ env.SKETCH_NAME_G030 }} binary"
+            git push origin ${{ env.BRANCH }}
+          fi
+
+  compile_G031:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH }}
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install STM32duino board package
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls ${{ env.STM32_INDEX_URL }}
+          arduino-cli core update-index
+          arduino-cli core install STMicroelectronics:stm32
+
+      # Generic STM32G0 series, board part number Generic G031K8Tx, U(S)ART support Disabled
+      - name: Compile firmware
+        run: |
+          arduino-cli compile --fqbn ${{ env.FQBN_G031 }} --output-dir ${{ runner.temp }}/build ${{ env.SKETCH_DIR_G031 }}
+          cp ${{ runner.temp }}/build/${{ env.SKETCH_NAME_G031 }}.ino.bin ${{ env.SKETCH_DIR_G031 }}/${{ env.SKETCH_NAME_G031 }}.ino.GENERIC_G031K8TX.bin
+
+      - name: Commit and push the updated binary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ${{ env.SKETCH_DIR_G031 }}/${{ env.SKETCH_NAME_G031 }}.ino.GENERIC_G031K8TX.bin
+          if git diff --cached --quiet; then
+            echo "Binary is unchanged - nothing to commit"
+          else
+            git commit -m "Update ${{ env.SKETCH_NAME_G031 }} binary"
+            git push origin ${{ env.BRANCH }}
+          fi

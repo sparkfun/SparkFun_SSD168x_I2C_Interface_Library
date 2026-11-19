@@ -90,7 +90,7 @@ template <typename DeviceType> class SSD168xI2CBaseClass : public Print // NOTE:
     // begin()
     //
     // This method is called to initialize the SSD168x library and connection to
-    // the MSP430FR2433 bridge. This method must be called before calling any graphics methods.
+    // the I2C-SPI Bridge. This method must be called before calling any graphics methods.
     //
     // This method follows the standard startup pattern in SparkFun Arduino
     // libraries.

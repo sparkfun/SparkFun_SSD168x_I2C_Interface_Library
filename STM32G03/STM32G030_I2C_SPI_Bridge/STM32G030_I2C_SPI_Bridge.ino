@@ -1,6 +1,9 @@
 /* STM32 (G030) I2C to SPI Bridge - for e-paper displays
 
-By P.C. for SparkFun Electronics, May 6th 2026
+By P.C. for SparkFun Electronics, November 19th 2026
+
+Changes after the May 6th 2026 release:
+Increased the Reset pulse width to 200 microseconds, followed by a delay of 200 microseconds
 
 Based loosely on example code from the STM32 Boards package
 
@@ -101,7 +104,7 @@ void setup()
 
   Wire.setSDA(PB_7);
   Wire.setSCL(PB_6);
-  Wire.begin(I2C_ADDR);         // join i2c bus with address I2C_ADDR
+  Wire.begin(I2C_ADDR, false, false); // No general call. Clock stretching enabled
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent); // register event
 }
@@ -180,8 +183,9 @@ void loop()
       digitalWrite(CS, HIGH); // Just in case
       digitalWrite(DC, HIGH); // Just in case
       digitalWrite(RST, LOW);
-      delayMicroseconds(100);
+      delayMicroseconds(200);
       digitalWrite(RST, HIGH);
+      delayMicroseconds(200);
     }
 
     bytesToSend = 0; // Done
