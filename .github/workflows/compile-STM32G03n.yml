@@ -15,10 +15,10 @@ env:
   BRANCH: ${{ github.ref_name }}
   SKETCH_DIR_G030: STM32G03/STM32G030_I2C_SPI_Bridge
   SKETCH_NAME_G030: STM32G030_I2C_SPI_Bridge
-  FQBN_G030: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G030F6PX,xserial=disabled
+  FQBN_G030: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G030F6PX,upload_method=swdMethod,xserial=disabled,usb=none,opt=osstd,dbg=none,rtlib=nano
   SKETCH_DIR_G031: STM32G03/STM32G031_I2C_SPI_Bridge
   SKETCH_NAME_G031: STM32G031_I2C_SPI_Bridge
-  FQBN_G031: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G031K6TX
+  FQBN_G031: STMicroelectronics:stm32:GenG0:pnum=GENERIC_G030K8TX,upload_method=swdMethod,xserial=generic,usb=none,opt=osstd,dbg=none,rtlib=nano
   STM32_INDEX_URL: https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json
 
 jobs:
