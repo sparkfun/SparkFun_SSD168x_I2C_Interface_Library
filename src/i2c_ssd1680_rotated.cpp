@@ -570,7 +570,9 @@ void I2cSsd1680Rotated::drawLineVert(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
         endBit = y0 + kByteNBits - startBit > y1 ? mod_byte(y1) : kByteNBits - 1;
 
         // Set the bits from startBit to endBit
-        setBits = (0xFF << ((kByteNBits - endBit) - 1)) >> startBit; // what bits are being set in this byte
+        // Mask to bits startBit to endBit only. (Shifting 0xFF left promotes it to int: without the second
+        // mask, the bits shifted above bit 7 come back into the byte on the right shift, setting extra bits)
+        setBits = (uint8_t)((0xFF >> startBit) & (0xFF << ((kByteNBits - endBit) - 1))); // what bits are being set in this byte
 
         // set the bits in the graphics buffer using the current byte operator
         // function
